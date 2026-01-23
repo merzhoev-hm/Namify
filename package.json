@@ -11,7 +11,7 @@
     "server": "node server.mjs",
     "start": "node server.mjs",
     "dev:full": "run-p dev server",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "npm run type-check && npm run build-only",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
