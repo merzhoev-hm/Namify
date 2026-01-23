@@ -237,6 +237,63 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
 
+  // Serve frontend in production
+  const isProd = process.env.NODE_ENV === 'production'
+  const distDir = path.join(__dirname, 'dist')
+
+  function sendFile(filePath) {
+    try {
+      const data = fs.readFileSync(filePath)
+      const ext = path.extname(filePath).toLowerCase()
+      const mime =
+        ext === '.html'
+          ? 'text/html; charset=utf-8'
+          : ext === '.js'
+            ? 'application/javascript; charset=utf-8'
+            : ext === '.css'
+              ? 'text/css; charset=utf-8'
+              : ext === '.json'
+                ? 'application/json; charset=utf-8'
+                : ext === '.svg'
+                  ? 'image/svg+xml'
+                  : ext === '.png'
+                    ? 'image/png'
+                    : ext === '.jpg' || ext === '.jpeg'
+                      ? 'image/jpeg'
+                      : ext === '.woff2'
+                        ? 'font/woff2'
+                        : 'application/octet-stream'
+
+      res.writeHead(200, { 'Content-Type': mime })
+      res.end(data)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  if (isProd && !url.pathname.startsWith('/api')) {
+    // assets
+    const assetPath = path.join(distDir, url.pathname.replace(/^\//, ''))
+    if (url.pathname !== '/' && sendFile(assetPath)) return
+
+    // SPA fallback
+    const indexPath = path.join(distDir, 'index.html')
+    if (sendFile(indexPath)) return
+
+    sendJson(res, 500, { error: 'Frontend not built (dist missing)' })
+    return
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/debug') {
+    sendJson(res, 200, {
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      model: process.env.OPENAI_MODEL ?? 'not_set',
+      node: process.version,
+    })
+    return
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/health') {
     sendJson(res, 200, { ok: true })
     return
@@ -260,67 +317,98 @@ const server = http.createServer(async (req, res) => {
         return
       }
 
-      const prompt = `
-You are a brand naming assistant.
-Task: generate ${count} short, brandable project names based on the idea below.
+      const schema = {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          suggestions: {
+            type: 'array',
+            minItems: count,
+            maxItems: count,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                label: { type: 'string', minLength: 2, maxLength: 40 },
+                base: { type: 'string', minLength: 2, maxLength: 40 },
+                description: { type: 'string', minLength: 5, maxLength: 140 },
+              },
+              required: ['label', 'base', 'description'],
+            },
+          },
+        },
+        required: ['suggestions'],
+      }
 
-Rules:
-- Output ONLY valid JSON.
-- Output format: {"suggestions":[{"label":"Name","base":"slug"}]}
-- "label" is the display name (Latin letters preferred).
-- "base" must be a lowercase domain-friendly slug (a-z, 0-9, hyphen), no dots, no spaces.
-- Do not include TLDs (.com etc).
-- Avoid trademarks and famous brands.
-- Names should be 4–12 characters when possible.
-
-Idea: ${idea}
-`.trim()
-
-      const resp = await openai.responses.create({
+      const response = await openai.responses.create({
         model: OPENAI_MODEL,
-        input: prompt,
+        input: [
+          {
+            role: 'system',
+            content:
+              'You are a brand naming assistant. Generate short, brandable project names. Avoid famous brands/trademarks. Prefer Latin letters. Do not include TLDs.',
+          },
+          {
+            role: 'user',
+            content:
+              `Idea: ${idea}\n` +
+              `Return exactly ${count} options. "base" must be lowercase domain slug: a-z, 0-9, hyphen, no dots, no spaces.`,
+          },
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'namify_names',
+            strict: true,
+            schema,
+          },
+        },
+        max_output_tokens: 400,
       })
 
-      const text = resp.output_text ?? ''
-      const parsed = extractJson(text)
-
-      let suggestions = []
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.suggestions)) {
-        suggestions = parsed.suggestions
-      } else if (Array.isArray(parsed)) {
-        suggestions = parsed
+      // edge cases (как в доке)
+      if (
+        response.status === 'incomplete' &&
+        response.incomplete_details?.reason === 'max_output_tokens'
+      ) {
+        throw new Error('Incomplete response')
       }
 
-      // нормализация
-      const seen = new Set()
-      const normalized = []
-      for (const s of suggestions) {
-        const label = String(s?.label ?? s?.name ?? '').trim()
-        if (!label) continue
-        let base = String(s?.base ?? '').trim()
-        base = base ? toBase(base) : toBase(label)
+      const content = response.output?.[0]?.content?.[0]
+      if (!content) throw new Error('No response content')
 
-        // уникальность
-        let unique = base
-        let n = 2
-        while (seen.has(unique)) {
-          unique = `${base}-${n++}`.slice(0, 30)
-        }
-        seen.add(unique)
-
-        normalized.push({ label, base: unique })
-        if (normalized.length >= count) break
-      }
-
-      if (normalized.length === 0) {
+      if (content.type === 'refusal') {
+        // модель отказалась — отдадим fallback
         sendJson(res, 200, { suggestions: makeMockNames(idea, count), mode: 'fallback' })
         return
       }
 
+      if (content.type !== 'output_text') throw new Error('Unexpected content type')
+
+      const data = JSON.parse(content.text)
+
+      // нормализуем slug, на всякий
+      const normalized = (data.suggestions ?? []).slice(0, count).map((s) => ({
+        label: String(s.label).trim(),
+        base: toBase(String(s.base).trim()),
+        description: String(s.description).trim(),
+      }))
+
       sendJson(res, 200, { suggestions: normalized, mode: 'openai' })
       return
     } catch (e) {
-      sendJson(res, 500, { error: 'Failed to generate names' })
+      const status = e?.status ?? e?.response?.status ?? null
+      const message = e?.message ? String(e.message) : String(e)
+      const details = e?.error ?? e?.response?.data ?? null
+
+      console.error('[api/names] error:', { status, message, details })
+
+      sendJson(res, 500, {
+        error: 'Failed to generate names',
+        status,
+        message,
+        details,
+      })
       return
     }
   }
