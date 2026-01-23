@@ -35,7 +35,8 @@ const PREFIXES = [
   'True',
 ]
 
-export const REGISTER_URL_TEMPLATE = 'https://www.reg.ru/buy/domains/?query={domain}'
+export const REGISTER_URL_TEMPLATE =
+  'https://www.reg.ru/buy/domains/?rlink=reflink-31171513&query={domain}'
 
 export function buildRegisterUrl(domain: string) {
   return REGISTER_URL_TEMPLATE.replace('{domain}', encodeURIComponent(domain))

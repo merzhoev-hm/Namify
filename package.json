@@ -1,5 +1,5 @@
 {
-  "name": "package.json",
+  "name": "namify",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
+    "server": "node server.mjs",
+    "dev:full": "run-p dev server",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",

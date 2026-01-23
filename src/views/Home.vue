@@ -134,23 +134,39 @@ function onInput() {
                 class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-zinc-800"
               >
                 <div class="text-sm font-medium">{{ item.fqdn }}</div>
-                <span
-                  class="text-xs font-semibold px-2 py-1 rounded-full"
-                  :class="{
-                    'bg-emerald-500 text-white': item.status === 'available',
-                    'bg-rose-500 text-white': item.status === 'taken',
-                    'bg-gray-900 text-white dark:bg-white dark:text-black':
-                      item.status === 'unknown',
-                  }"
-                >
-                  {{
-                    item.status === 'available'
-                      ? 'Доступен'
-                      : item.status === 'taken'
-                        ? 'Занят'
-                        : 'Неизвестно'
-                  }}
-                </span>
+
+                <div class="flex items-center gap-2">
+                  <a
+                    v-if="!item.checking && item.status === 'available'"
+                    :href="item.registerUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-xs font-semibold px-3 py-1 rounded-full border border-black dark:border-white hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+                  >
+                    Зарегистрировать домен
+                  </a>
+
+                  <span
+                    class="text-xs font-semibold px-2 py-1 rounded-full"
+                    :class="{
+                      'bg-slate-500 text-white': item.checking,
+                      'bg-emerald-500 text-white': !item.checking && item.status === 'available',
+                      'bg-rose-500 text-white': !item.checking && item.status === 'taken',
+                      'bg-gray-900 text-white dark:bg-white dark:text-black':
+                        !item.checking && item.status === 'unknown',
+                    }"
+                  >
+                    {{
+                      item.checking
+                        ? 'Проверяем...'
+                        : item.status === 'available'
+                          ? 'Доступен'
+                          : item.status === 'taken'
+                            ? 'Занят'
+                            : 'Неизвестно'
+                    }}
+                  </span>
+                </div>
               </div>
             </div>
           </Transition>

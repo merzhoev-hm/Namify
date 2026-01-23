@@ -1,4 +1,7 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { Mail, Send } from 'lucide-vue-next'
+</script>
+
 <template>
   <footer class="bg-gray-100 text-gray-700 dark:bg-zinc-900 dark:text-gray-300 py-8 mt-12">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
