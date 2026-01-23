@@ -1,15 +1,16 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig(async ({ command }) => {
-  const plugins = [vue()]
+  const plugins: PluginOption[] = [vue()]
 
-  // ✅ Devtools только в режиме разработки (vite dev)
+  // Devtools только при vite dev
   if (command === 'serve') {
     const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
-    plugins.push(vueDevTools())
+    const devtools = vueDevTools()
+    if (devtools) plugins.push(devtools)
   }
 
   return {
