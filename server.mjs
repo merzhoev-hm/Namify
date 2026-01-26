@@ -40,9 +40,15 @@ const PORT = Number(process.env.PORT ?? process.env.NAMIFY_PORT ?? 8787)
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? '*' // если будешь деплоить — лучше указать домен
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini' // можно переопределить в .env
+const OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'llama-3.3-70b-versatile'
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 
-const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null
+const openai = OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {}),
+    })
+  : null
 
 function sendJson(res, status, data) {
   const body = JSON.stringify(data)
@@ -339,62 +345,62 @@ const server = http.createServer(async (req, res) => {
         },
         required: ['suggestions'],
       }
-
-      const response = await openai.responses.create({
+      const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
-        input: [
+        temperature: 0.9,
+        messages: [
           {
             role: 'system',
             content:
-              'You are a brand naming assistant. Generate short, brandable project names. Avoid famous brands/trademarks. Prefer Latin letters. Do not include TLDs.',
+              'You are a brand naming assistant. Return ONLY valid JSON. No markdown. No extra text.',
           },
           {
             role: 'user',
             content:
               `Idea: ${idea}\n` +
-              `Return exactly ${count} options. "base" must be lowercase domain slug: a-z, 0-9, hyphen, no dots, no spaces.`,
+              `Return exactly ${count} options in this JSON format:\n` +
+              `{"suggestions":[{"label":"Name","base":"domain-slug","description":"short"}]}\n` +
+              `Rules:\n` +
+              `- Do not include TLDs (.com etc)\n` +
+              `- base must be lowercase a-z0-9- only, no dots/spaces\n`,
           },
         ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'namify_names',
-            strict: true,
-            schema,
-          },
-        },
-        max_output_tokens: 400,
       })
 
-      // edge cases (как в доке)
-      if (
-        response.status === 'incomplete' &&
-        response.incomplete_details?.reason === 'max_output_tokens'
-      ) {
-        throw new Error('Incomplete response')
+      const text = completion.choices?.[0]?.message?.content ?? ''
+      const parsed = extractJson(text)
+
+      let suggestions = []
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.suggestions)) {
+        suggestions = parsed.suggestions
       }
 
-      const content = response.output?.[0]?.content?.[0]
-      if (!content) throw new Error('No response content')
+      // нормализация + защита от мусора
+      const normalized = []
+      const seen = new Set()
+      for (const s of suggestions) {
+        const label = String(s?.label ?? '').trim()
+        if (!label) continue
+        const base0 = String(s?.base ?? label).trim()
+        let base = toBase(base0)
 
-      if (content.type === 'refusal') {
-        // модель отказалась — отдадим fallback
+        let unique = base
+        let n = 2
+        while (seen.has(unique)) unique = `${base}-${n++}`.slice(0, 30)
+        seen.add(unique)
+
+        const description =
+          String(s?.description ?? '').trim() || generateDescription?.(label) || ''
+        normalized.push({ label, base: unique, description })
+        if (normalized.length >= count) break
+      }
+
+      if (normalized.length === 0) {
         sendJson(res, 200, { suggestions: makeMockNames(idea, count), mode: 'fallback' })
         return
       }
 
-      if (content.type !== 'output_text') throw new Error('Unexpected content type')
-
-      const data = JSON.parse(content.text)
-
-      // нормализуем slug, на всякий
-      const normalized = (data.suggestions ?? []).slice(0, count).map((s) => ({
-        label: String(s.label).trim(),
-        base: toBase(String(s.base).trim()),
-        description: String(s.description).trim(),
-      }))
-
-      sendJson(res, 200, { suggestions: normalized, mode: 'openai' })
+      sendJson(res, 200, { suggestions: normalized, mode: 'groq' })
       return
     } catch (e) {
       const status = e?.status ?? e?.response?.status ?? null
