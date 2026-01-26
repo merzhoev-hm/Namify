@@ -367,17 +367,22 @@ const server = http.createServer(async (req, res) => {
           {
             role: 'system',
             content:
-          'You are a brand naming assistant. Return ONLY valid JSON. No markdown. ' +
-    'Do NOT include any website/domain names from the user input. ' +
-    'If the user mentions a site (like hh.ru), ignore it and do not use its tokens.',    'You are a brand naming assistant. Return ONLY valid JSON. No markdown. No extra text.',
+              'Ты помощник по неймингу. Верни ТОЛЬКО валидный JSON без markdown и лишнего текста. ' +
+              'Названия — латиницей (brandable), без TLD (.com и т.п.), без доменов/сайтов из идеи. ' +
+              'Описание (description) — строго на русском, 1 короткое предложение.',
           },
           {
             role: 'user',
             content:
-              `Idea: ${idea}\n` +
-    `Return exactly ${count} options in JSON:\n` +
-    `{"suggestions":[{"label":"Name","base":"domain-slug","description":"short"}]}\n` +
-    `Rules: base is lowercase a-z0-9- only. Do not include TLDs.`, },
+              `Идея: ${idea}\n` +
+              `Сгенерируй ровно ${count} вариантов.\n` +
+              `Формат JSON строго такой:\n` +
+              `{"suggestions":[{"label":"Name","base":"domain-slug","description":"описание на русском"}]}\n` +
+              `Правила:\n` +
+              `- label: 4–12 символов по возможности, латиница\n` +
+              `- base: только a-z0-9- в нижнем регистре, без точек/пробелов\n` +
+              `- description: на русском, 5–12 слов\n`,
+          },
         ],
       })
 
