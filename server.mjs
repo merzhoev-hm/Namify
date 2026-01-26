@@ -122,6 +122,20 @@ function toBase(label) {
   return s
 }
 
+function stripDomainsFromIdea(idea) {
+  let s = String(idea ?? '')
+
+  // убрать ссылки целиком
+  s = s.replace(/https?:\/\/\S+/gi, ' ')
+
+  // убрать домены вида hh.ru, example.com, sub.site.org и т.п.
+  s = s.replace(/\b[a-z0-9-]+(\.[a-z0-9-]+)+\b/gi, ' ')
+
+  // подчистить лишние пробелы
+  s = s.replace(/\s+/g, ' ').trim()
+  return s
+}
+
 function makeMockNames(idea, count) {
   const base = toBase(idea)
   const presets = [
@@ -309,7 +323,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/names') {
     try {
       const body = await readJson(req)
-      const idea = String(body.idea ?? '').trim()
+      const rawIdea = String(body.idea ?? '').trim()
+      const idea = stripDomainsFromIdea(rawIdea)
       const count = Math.max(1, Math.min(Number(body.count ?? 4) || 4, 12))
 
       if (idea.length < 2) {
@@ -352,18 +367,17 @@ const server = http.createServer(async (req, res) => {
           {
             role: 'system',
             content:
-              'You are a brand naming assistant. Return ONLY valid JSON. No markdown. No extra text.',
+          'You are a brand naming assistant. Return ONLY valid JSON. No markdown. ' +
+    'Do NOT include any website/domain names from the user input. ' +
+    'If the user mentions a site (like hh.ru), ignore it and do not use its tokens.',    'You are a brand naming assistant. Return ONLY valid JSON. No markdown. No extra text.',
           },
           {
             role: 'user',
             content:
               `Idea: ${idea}\n` +
-              `Return exactly ${count} options in this JSON format:\n` +
-              `{"suggestions":[{"label":"Name","base":"domain-slug","description":"short"}]}\n` +
-              `Rules:\n` +
-              `- Do not include TLDs (.com etc)\n` +
-              `- base must be lowercase a-z0-9- only, no dots/spaces\n`,
-          },
+    `Return exactly ${count} options in JSON:\n` +
+    `{"suggestions":[{"label":"Name","base":"domain-slug","description":"short"}]}\n` +
+    `Rules: base is lowercase a-z0-9- only. Do not include TLDs.`, },
         ],
       })
 
