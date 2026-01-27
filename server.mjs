@@ -387,7 +387,7 @@ const server = http.createServer(async (req, res) => {
               `Формат строго:\n` +
               `{"suggestions":[{"label":"Name","base":"domain-slug","description":"описание"}]}\n` +
               `Правила:\n` +
-              `- label: от 10 до 15 символов строго\n` +
+              `- label: от 10 до 15 символов по возможности\n` +
               `- избегай очевидных слов типа "auto", "reply", "finance" напрямую — лучше образ/неологизм\n` +
               `- description: на русском, 6–12 слов\n`,
           },
@@ -408,8 +408,10 @@ const server = http.createServer(async (req, res) => {
       for (const s of suggestions) {
         const label = String(s?.label ?? '').trim()
         if (!label) continue
-        const base0 = String(s?.base ?? label).trim()
-        let base = toBase(base0)
+
+        let base = label.toLowerCase()
+        base = base.replace(/[^a-z0-9-]/g, '') // только a-z 0-9 и дефис
+        if (!base) continue
 
         let unique = base
         let n = 2
@@ -421,7 +423,6 @@ const server = http.createServer(async (req, res) => {
         normalized.push({ label, base: unique, description })
         if (normalized.length >= count) break
       }
-
       if (normalized.length === 0) {
         sendJson(res, 200, { suggestions: makeMockNames(idea, count), mode: 'fallback' })
         return
