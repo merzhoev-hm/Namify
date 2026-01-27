@@ -135,6 +135,18 @@ function stripDomainsFromIdea(idea) {
   s = s.replace(/\s+/g, ' ').trim()
   return s
 }
+function labelToBaseStrict(label) {
+  // base = label в нижнем регистре, только a-z0-9, без дефисов
+  return String(label ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 30)
+}
+
+function fallbackDescription(label, idea) {
+  // короткое описание на русском, если модель не вернула description
+  return `Короткое запоминающееся название для идеи: ${idea}.`
+}
 
 function makeMockNames(idea, count) {
   const base = toBase(idea)
@@ -258,7 +270,10 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
 
   // Serve frontend in production
-  const isProd = process.env.NODE_ENV === 'production'
+  const isProd =
+    process.env.NODE_ENV === 'production' ||
+    !!process.env.RENDER ||
+    fs.existsSync(path.join(distDir, 'index.html'))
   const distDir = path.join(__dirname, 'dist')
 
   function sendFile(filePath) {
@@ -338,28 +353,6 @@ const server = http.createServer(async (req, res) => {
         return
       }
 
-      const schema = {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          suggestions: {
-            type: 'array',
-            minItems: count,
-            maxItems: count,
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                label: { type: 'string', minLength: 2, maxLength: 40 },
-                base: { type: 'string', minLength: 2, maxLength: 40 },
-                description: { type: 'string', minLength: 5, maxLength: 140 },
-              },
-              required: ['label', 'base', 'description'],
-            },
-          },
-        },
-        required: ['suggestions'],
-      }
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
         temperature: 1.1,
@@ -367,29 +360,19 @@ const server = http.createServer(async (req, res) => {
           {
             role: 'system',
             content:
-              'Ты креативный неймер. Верни ТОЛЬКО валидный JSON без markdown.\n' +
+              'Верни ТОЛЬКО валидный JSON, без markdown и без лишнего текста.\n' +
               'Требования:\n' +
-              '- label: брендовые названия латиницей, звучные, необычные.\n' +
-              '- base: доменный slug (a-z0-9-), нижний регистр.\n' +
+              '- label: название латиницей (1 слово или PascalCase), без слов shop/store/market.\n' +
+              '- base: это label в нижнем регистре, ТОЛЬКО a-z0-9, без дефисов.\n' +
               '- description: строго на русском, 1 короткое предложение.\n' +
-              'Креативные паттерны (используй разные):\n' +
-              '1) неологизм (придуманное слово), 2) слитные слова (blend), 3) метафора/образ,\n' +
-              '4) короткое “tech” звучание, 5) лёгкая аллитерация.\n' +
-              'Запрещено:\n' +
-              '- слова app, hub, pro, service, online, cloud, tech, ai, bot, tool в самом названии\n' +
-              '- упоминать сайты/домены из идеи (например hh.ru) или их части.\n',
+              'Запрещено: использовать домены/сайты из идеи (например hh.ru) и их части.\n',
           },
           {
             role: 'user',
             content:
               `Идея: ${idea}\n` +
-              `ерируй ${Math.max(count, 12)} вариантов (минимум 12), а я выберу лучшие 4.\n` +
-              `Формат строго:\n` +
-              `{"suggestions":[{"label":"Name","base":"domain-slug","description":"описание"}]}\n` +
-              `Правила:\n` +
-              `- label: от 10 до 15 символов по возможности\n` +
-              `- избегай очевидных слов типа "auto", "reply", "finance" напрямую — лучше образ/неологизм\n` +
-              `- description: на русском, 6–12 слов\n`,
+              `Верни ровно ${count} вариантов в формате:\n` +
+              `{"suggestions":[{"label":"Papirion","base":"papirion","description":"..."}]}\n`,
           },
         ],
       })
@@ -405,21 +388,21 @@ const server = http.createServer(async (req, res) => {
       // нормализация + защита от мусора
       const normalized = []
       const seen = new Set()
+
       for (const s of suggestions) {
         const label = String(s?.label ?? '').trim()
         if (!label) continue
 
-        let base = label.toLowerCase()
-        base = base.replace(/[^a-z0-9-]/g, '') // только a-z 0-9 и дефис
-        if (!base) continue
+        const base0 = labelToBaseStrict(label)
+        if (!base0) continue
 
-        let unique = base
+        let unique = base0
         let n = 2
-        while (seen.has(unique)) unique = `${base}-${n++}`.slice(0, 30)
+        while (seen.has(unique)) unique = `${base0}${n++}`.slice(0, 30)
         seen.add(unique)
 
-        const description =
-          String(s?.description ?? '').trim() || generateDescription?.(label) || ''
+        const description = String(s?.description ?? '').trim() || fallbackDescription(label, idea)
+
         normalized.push({ label, base: unique, description })
         if (normalized.length >= count) break
       }
