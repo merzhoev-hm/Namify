@@ -27,7 +27,7 @@ const canGenerate = computed(() => idea.value.trim().length >= 2 && tlds.selecte
 
 function onGenerate() {
   if (!canGenerate.value) return
-  suggestionsStore.generate(idea.value, tlds.selected)
+  suggestionsStore.generate(idea.value, [...tlds.selected])
 }
 
 // Следим за лимитом символов
@@ -60,6 +60,8 @@ function onInput() {
             </span>
           </div>
         </div>
+
+        <!-- ВАЖНО: всё внутри одного form -->
         <form @submit.prevent="onGenerate">
           <input
             v-model="idea"
@@ -69,7 +71,45 @@ function onInput() {
             placeholder="например: Махачкала кофе"
             class="w-full rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 px-4 py-3 outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 mb-2"
           />
+
+          <!-- TLD селектор -->
+          <TldSelector />
+
+          <div class="mt-6 flex gap-3">
+            <button
+              type="submit"
+              :disabled="!canGenerate || suggestionsStore.generating"
+              class="w-full rounded-xl px-5 py-3 text-sm font-semibold border border-black dark:border-white hover:bg-gray-100/80 dark:hover:bg-zinc-800/70 disabled:opacity-50 disabled:cursor-not-allowed min-w-[150px]"
+            >
+              {{ suggestionsStore.generating ? 'Генерирую...' : 'Сгенерировать' }}
+            </button>
+          </div>
         </form>
+      </div>
+
+      <div
+        class="bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 rounded-2xl p-4 md:p-6 shadow-sm"
+      >
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium">Идея проекта</label>
+          <div class="flex items-center gap-2">
+            <span v-if="warning" class="text-xs text-rose-500 font-medium">{{ warning }}</span>
+            <span class="text-xs" :class="ideaCounterClass">
+              {{ ideaCount }}/{{ MAX_IDEA_LEN }}
+            </span>
+          </div>
+        </div>
+
+        <input
+          v-model="idea"
+          @input="onInput"
+          @keydown.enter.prevent="onGenerate"
+          type="text"
+          :maxlength="MAX_IDEA_LEN"
+          placeholder="например: Махачкала кофе"
+          class="w-full rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 px-4 py-3 outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 mb-2"
+        />
+
         <!-- TLD селектор -->
         <TldSelector :all="tlds.all" :selected="tlds.selected" @toggle="tlds.toggle" />
 

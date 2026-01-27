@@ -1,12 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { makeNameVariants, buildRegisterUrl, generateDescription } from '@/utils/generator'
+import { buildRegisterUrl, generateDescription, makeNameVariants } from '@/utils/generator'
 
-type Tld = string
 type DomainStatus = 'available' | 'taken' | 'unknown'
 
 export type TldResult = {
-  tld: Tld
+  tld: string
   fqdn: string
   status: DomainStatus
   checking: boolean
@@ -24,7 +23,7 @@ export type Suggestion = {
 
 type ApiNamesResponse = {
   suggestions: Array<{ label: string; base?: string; description?: string }>
-  mode?: 'openai' | 'mock' | 'fallback'
+  mode?: 'groq' | 'openai' | 'mock' | 'fallback'
 }
 
 type ApiDomainsResponse = {
@@ -41,6 +40,32 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return (await r.json()) as T
 }
 
+function labelToBase(label: string) {
+  // Требование: base = label в нижнем регистре (без суффиксов типа -shop)
+  // Оставляем только a-z0-9, чтобы домены были валидными.
+  return label.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function makeUniqueBase(base: string, used: Set<string>) {
+  let unique = base
+  let n = 2
+  while (used.has(unique)) unique = `${base}${n++}`.slice(0, 30)
+  used.add(unique)
+  return unique
+}
+
+function genId() {
+  return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function stripDomainsFromIdea(idea: string) {
+  let s = String(idea ?? '')
+  s = s.replace(/https?:\/\/\S+/gi, ' ')
+  s = s.replace(/\b[a-z0-9-]+(\.[a-z0-9-]+)+\b/gi, ' ')
+  s = s.replace(/\s+/g, ' ').trim()
+  return s
+}
+
 export const useSuggestionsStore = defineStore('suggestions', () => {
   const generating = ref(false)
   const suggestions = ref<Suggestion[]>([])
@@ -49,7 +74,6 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
     const allItems = suggestions.value.flatMap((s) => s.items)
     if (allItems.length === 0) return
 
-    // включаем "проверяем..."
     allItems.forEach((i) => {
       i.checking = true
     })
@@ -75,27 +99,37 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
   }
 
   async function generate(idea: string, selectedTlds: string[]) {
-    if (!idea || selectedTlds.length === 0) return
+    const cleanedIdea = stripDomainsFromIdea(idea)
+    if (!cleanedIdea || selectedTlds.length === 0) return
     generating.value = true
 
     try {
-      // 1) пытаемся взять реальные имена с сервера
-      const data = await postJson<ApiNamesResponse>('/api/names', { idea, count: 4 })
+      const data = await postJson<ApiNamesResponse>('/api/names', { idea: cleanedIdea, count: 4 })
 
+      const used = new Set<string>()
       const variants = (data.suggestions ?? [])
-        .filter((x) => x.label && (x.base || x.label))
-        .slice(0, 4)
         .map((x) => ({
-          label: x.label,
-          base: (x.base ?? x.label).toString().toLowerCase().replace(/\s+/g, '-'),
-          description: x.description,
+          label: String(x.label ?? '').trim(),
+          description: String(x.description ?? '').trim(),
         }))
+        .filter((x) => x.label.length >= 2)
+        .map((x) => {
+          const baseRaw = labelToBase(x.label)
+          const base = baseRaw.length >= 2 ? makeUniqueBase(baseRaw, used) : ''
+          return {
+            label: x.label,
+            base,
+            description: x.description || generateDescription(x.label),
+          }
+        })
+        .filter((x) => x.base.length >= 2)
+        .slice(0, 4)
 
       suggestions.value = variants.map((v) => ({
-        id: crypto.randomUUID(),
+        id: genId(),
         label: v.label,
         base: v.base,
-        description: v.description ?? generateDescription(v.label),
+        description: v.description,
         open: false,
         items: selectedTlds.map((tld) => ({
           tld,
@@ -106,14 +140,18 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
         })),
       }))
 
-      // 2) автопроверка доменов (не блокируем UI)
       void checkAllDomains()
     } catch {
-      // fallback на текущую локальную логику (чтобы всё работало даже без бэка)
-      const variants = makeNameVariants(idea)
+      const used = new Set<string>()
+      const variants = makeNameVariants(cleanedIdea)
+        .map((v) => ({
+          label: v.label,
+          base: makeUniqueBase(labelToBase(v.label), used),
+        }))
+        .filter((v) => v.base.length >= 2)
 
       suggestions.value = variants.map((v) => ({
-        id: crypto.randomUUID(),
+        id: genId(),
         label: v.label,
         base: v.base,
         description: generateDescription(v.label),
@@ -126,6 +164,8 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
           registerUrl: buildRegisterUrl(`${v.base}.${tld}`),
         })),
       }))
+
+      void checkAllDomains()
     } finally {
       generating.value = false
     }

@@ -2,15 +2,24 @@
 import { useTldsStore } from '@/stores/tlds'
 const tlds = useTldsStore()
 </script>
+
 <template>
   <div>
     <div class="flex items-center justify-between gap-2 mb-2">
       <span class="text-sm font-medium">Выберите доменные окончания (TLD)</span>
       <div class="flex gap-2">
-        <button @click="tlds.selectAll" class="cursor-pointer text-xs underline hover:opacity-60">
+        <button
+          type="button"
+          @click="tlds.selectAll"
+          class="cursor-pointer text-xs underline hover:opacity-60"
+        >
           Выбрать все
         </button>
-        <button @click="tlds.clearAll" class="cursor-pointer text-xs underline hover:opacity-60">
+        <button
+          type="button"
+          @click="tlds.clearAll"
+          class="cursor-pointer text-xs underline hover:opacity-60"
+        >
           Снять выбор
         </button>
       </div>
