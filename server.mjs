@@ -387,7 +387,7 @@ const server = http.createServer(async (req, res) => {
               `Формат строго:\n` +
               `{"suggestions":[{"label":"Name","base":"domain-slug","description":"описание"}]}\n` +
               `Правила:\n` +
-              `- label: 5–10 символов по возможности\n` +
+              `- label: до 15 символов по возможности\n` +
               `- избегай очевидных слов типа "auto", "reply", "finance" напрямую — лучше образ/неологизм\n` +
               `- description: на русском, 6–12 слов\n`,
           },
