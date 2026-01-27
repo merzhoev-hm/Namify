@@ -355,7 +355,7 @@ const server = http.createServer(async (req, res) => {
 
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
-        temperature: 1.1,
+        temperature: 10,
         messages: [
           {
             role: 'system',
