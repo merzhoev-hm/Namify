@@ -60,16 +60,16 @@ function onInput() {
             </span>
           </div>
         </div>
-
-        <input
-          v-model="idea"
-          @input="onInput"
-          type="text"
-          :maxlength="MAX_IDEA_LEN"
-          placeholder="например: Махачкала кофе"
-          class="w-full rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 px-4 py-3 outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 mb-2"
-        />
-
+        <form @submit.prevent="onGenerate">
+          <input
+            v-model="idea"
+            @input="onInput"
+            type="text"
+            :maxlength="MAX_IDEA_LEN"
+            placeholder="например: Махачкала кофе"
+            class="w-full rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 px-4 py-3 outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 mb-2"
+          />
+        </form>
         <!-- TLD селектор -->
         <TldSelector :all="tlds.all" :selected="tlds.selected" @toggle="tlds.toggle" />
 
