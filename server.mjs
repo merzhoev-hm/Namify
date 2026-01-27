@@ -362,9 +362,9 @@ const server = http.createServer(async (req, res) => {
             content:
               'Верни ТОЛЬКО валидный JSON, без markdown и без лишнего текста.\n' +
               'Требования:\n' +
-              '- label: название латиницей (1 слово или PascalCase), без слов shop/store/market.\n' +
+              '- label: название латиницей (1-2 слова или PascalCase), без слов shop/store/market.\n' +
               '- base: это label в нижнем регистре, ТОЛЬКО a-z0-9, без дефисов.\n' +
-              '- description: строго на русском, 1 короткое предложение.\n' +
+              '- description: строго на русском, 1  предложение.\n' +
               'Запрещено: использовать домены/сайты из идеи (например hh.ru) и их части.\n',
           },
           {
@@ -372,7 +372,7 @@ const server = http.createServer(async (req, res) => {
             content:
               `Идея: ${idea}\n` +
               `Верни ровно ${count} вариантов в формате:\n` +
-              `{"suggestions":[{"label":"Papirion","base":"papirion","description":"..."}]}\n`,
+              `{"suggestions":[{"label":"...","base":"...","description":"..."}]}\n`,
           },
         ],
       })
