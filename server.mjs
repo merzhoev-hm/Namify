@@ -383,7 +383,7 @@ const server = http.createServer(async (req, res) => {
             role: 'user',
             content:
               `Идея: ${idea}\n` +
-              `Сгенерируй ${Math.max(count, 12)} вариантов (минимум 12), а я выберу лучшие 4.\n` +
+              `ерируй ${Math.max(count, 12)} вариантов (минимум 12), а я выберу лучшие 4.\n` +
               `Формат строго:\n` +
               `{"suggestions":[{"label":"Name","base":"domain-slug","description":"описание"}]}\n` +
               `Правила:\n` +
