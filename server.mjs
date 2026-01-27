@@ -371,7 +371,7 @@ const server = http.createServer(async (req, res) => {
             role: 'user',
             content:
               `Идея: ${idea}\n` +
-              `Верни ровно ${count} вариантов в формате:\n` +
+              `Верни ровно 4 вариантов в формате:\n` +
               `{"suggestions":[{"label":"...","base":"...","description":"..."}]}\n`,
           },
         ],
