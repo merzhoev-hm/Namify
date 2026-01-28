@@ -12,18 +12,46 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') close()
 }
 
+// --- фикс "скачка" страницы из-за исчезновения скроллбара ---
+let prevOverflow = ''
+let prevPaddingRight = ''
+let prevScrollTop = 0
+
+function lockScroll() {
+  prevOverflow = document.body.style.overflow
+  prevPaddingRight = document.body.style.paddingRight
+
+  // ширина скроллбара
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+  // запомним позицию скролла
+  prevScrollTop = window.scrollY || document.documentElement.scrollTop || 0
+
+  document.body.style.overflow = 'hidden'
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`
+  }
+}
+
+function unlockScroll() {
+  document.body.style.overflow = prevOverflow
+  document.body.style.paddingRight = prevPaddingRight
+  window.scrollTo(0, prevScrollTop)
+}
+
 watch(
   () => props.open,
   (v) => {
-    // блокируем скролл фона, пока модалка открыта
-    document.body.style.overflow = v ? 'hidden' : ''
+    if (v) lockScroll()
+    else unlockScroll()
   },
 )
 
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
-  document.body.style.overflow = ''
+  // на всякий случай возвращаем всё обратно
+  unlockScroll()
 })
 </script>
 
