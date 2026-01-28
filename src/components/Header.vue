@@ -52,7 +52,7 @@ onMounted(() => {
           v-if="!auth.user"
           type="button"
           @click="authOpen = true"
-          class="rounded-full px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+          class="rounded-full px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white bg-white dark:bg-zinc-900 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80 transition"
         >
           Войти
         </button>
@@ -67,7 +67,7 @@ onMounted(() => {
           <button
             type="button"
             @click="auth.logout"
-            class="rounded-full px-3 py-2 text-xs font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+            class="rounded-full px-3 py-2 text-xs font-semibold border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white bg-white dark:bg-zinc-900 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80 transition"
           >
             Выйти
           </button>

@@ -73,13 +73,13 @@ onBeforeUnmount(() => {
 
       <!-- окно -->
       <div
-        class="relative w-[92vw] max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 shadow-xl p-5"
+        class="relative w-[92vw] max-w-md rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border border-gray-200/70 dark:border-zinc-800 shadow-xl p-5"
       >
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Вход</h2>
           <button
             type="button"
-            class="rounded-full px-3 py-2 text-sm hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+            class="rounded-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
             @click="close"
           >
             ✕
