@@ -10,8 +10,6 @@ import OpenAI from 'openai'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? ''
-const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
 
 // ВАЖНО: это in-memory сессии (на бесплатном Render могут пропадать после сна/рестарта)
 const sessions = new Map() // sid -> { user, ts }
@@ -43,6 +41,9 @@ function loadEnvFile(filePath) {
 }
 
 loadEnvFile(path.join(__dirname, '.env'))
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? ''
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
 
 const PORT = Number(process.env.PORT ?? process.env.NAMIFY_PORT ?? 8787)
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? '*' // если будешь деплоить — лучше указать домен
