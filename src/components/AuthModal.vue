@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="mt-4">
+        <div class="mt-4 min-h-[110px]">
           <slot />
         </div>
       </div>
