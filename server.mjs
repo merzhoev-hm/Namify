@@ -270,11 +270,11 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
 
   // Serve frontend in production
+  const distDir = path.join(__dirname, 'dist')
   const isProd =
     process.env.NODE_ENV === 'production' ||
     !!process.env.RENDER ||
     fs.existsSync(path.join(distDir, 'index.html'))
-  const distDir = path.join(__dirname, 'dist')
 
   function sendFile(filePath) {
     try {
@@ -362,7 +362,7 @@ const server = http.createServer(async (req, res) => {
             content:
               'Верни ТОЛЬКО валидный JSON, без markdown и без лишнего текста.\n' +
               'Требования:\n' +
-              '- label: название латиницей (1-2 слова или PascalCase), без слов shop/store/market.\n' +
+              '- label: СТРОГО латиницей (A-Z/a-z), если идея на кириллице/ингушском — сделай транслитерацию в латиницу.\n' +
               '- base: это label в нижнем регистре, ТОЛЬКО a-z0-9, без дефисов.\n' +
               '- description: строго на русском, 1  предложение.\n' +
               'Запрещено: использовать домены/сайты из идеи (например hh.ru) и их части.\n',

@@ -88,10 +88,12 @@ function translitRuToLat(input: string) {
     э: 'e',
     ю: 'yu',
     я: 'ya',
+    Ӏ: '',
+    ӏ: '',
   }
   return input
     .toLowerCase()
-    .replace(/[а-яё]/g, (ch) => map[ch] ?? '')
+    .replace(/[а-яёӀӏ]/g, (ch) => map[ch] ?? '')
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
