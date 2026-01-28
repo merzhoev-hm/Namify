@@ -19,6 +19,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "google-auth-library": "^10.5.0",
     "lucide-vue-next": "^0.542.0",
     "openai": "^5.23.2",
     "pinia": "^3.0.3",

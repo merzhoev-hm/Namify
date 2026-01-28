@@ -1,27 +1,40 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
+import { ref, onMounted, watchEffect } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import AuthModal from '@/components/AuthModal.vue'
+import GoogleLoginButton from '@/components/GoogleLoginButton.vue'
 
-// отслеживаем тему
+// AUTH
+const auth = useAuthStore()
+const authOpen = ref(false)
+
+onMounted(() => {
+  auth.me().catch(() => {})
+})
+
+// если вошли — закрываем модалку
+watchEffect(() => {
+  if (auth.user) authOpen.value = false
+})
+
+// THEME
 const isDark = ref(false)
 
-// переключаем тему
+function applyTheme() {
+  if (isDark.value) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+}
+
 const toggleTheme = () => {
   isDark.value = !isDark.value
-  if (isDark.value) {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
+  applyTheme()
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
 
-// при загрузке читаем из localStorage
-watchEffect(() => {
+onMounted(() => {
   const saved = localStorage.getItem('theme')
-  if (saved === 'dark') {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  }
+  if (saved === 'dark') isDark.value = true
+  applyTheme()
 })
 </script>
 
@@ -33,15 +46,50 @@ watchEffect(() => {
       <!-- Лого / название -->
       <h1 class="text-xl font-bold text-gray-900 dark:text-white">Namify</h1>
 
-      <!-- Кнопка переключения темы -->
-      <button
-        @click="toggleTheme"
-        class="flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
-      >
-        <span class="transition-transform duration-500" :class="{ 'rotate-360': isDark }">
-          {{ isDark ? '🌞' : '🌙' }}
-        </span>
-      </button>
+      <!-- Справа: Войти (слева) + тема (справа) -->
+      <div class="flex items-center gap-3">
+        <button
+          v-if="!auth.user"
+          type="button"
+          @click="authOpen = true"
+          class="rounded-full px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+        >
+          Войти
+        </button>
+
+        <div v-else class="flex items-center gap-2">
+          <img
+            v-if="auth.user.picture"
+            :src="auth.user.picture"
+            alt=""
+            class="h-8 w-8 rounded-full"
+          />
+          <button
+            type="button"
+            @click="auth.logout"
+            class="rounded-full px-3 py-2 text-xs font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+          >
+            Выйти
+          </button>
+        </div>
+
+        <!-- Кнопка переключения темы -->
+        <button
+          type="button"
+          @click="toggleTheme"
+          class="flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+        >
+          <span class="transition-transform duration-500" :class="{ 'rotate-360': isDark }">
+            {{ isDark ? '🌞' : '🌙' }}
+          </span>
+        </button>
+      </div>
     </div>
   </header>
+
+  <!-- Модалка входа -->
+  <AuthModal :open="authOpen" @close="authOpen = false">
+    <!-- пока только один способ -->
+    <GoogleLoginButton />
+  </AuthModal>
 </template>

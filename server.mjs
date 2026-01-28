@@ -1,5 +1,7 @@
 import http from 'node:http'
 import net from 'node:net'
+import crypto from 'node:crypto'
+import { OAuth2Client } from 'google-auth-library'
 import { URL, domainToASCII } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -8,6 +10,12 @@ import OpenAI from 'openai'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? ''
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
+
+// ВАЖНО: это in-memory сессии (на бесплатном Render могут пропадать после сна/рестарта)
+const sessions = new Map() // sid -> { user, ts }
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7 // 7 дней
 
 /** Минималистичная загрузка .env без зависимостей */
 function loadEnvFile(filePath) {
@@ -60,6 +68,42 @@ function sendJson(res, status, data) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   })
   res.end(body)
+}
+
+function parseCookies(req) {
+  const header = req.headers.cookie || ''
+  const out = {}
+  header.split(';').forEach((part) => {
+    const i = part.indexOf('=')
+    if (i === -1) return
+    const k = part.slice(0, i).trim()
+    const v = part.slice(i + 1).trim()
+    out[k] = decodeURIComponent(v)
+  })
+  return out
+}
+
+function setSessionCookie(res, sid, { secure }) {
+  const attrs = [
+    `sid=${encodeURIComponent(sid)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
+  ]
+  if (secure) attrs.push('Secure')
+  res.setHeader('Set-Cookie', attrs.join('; '))
+}
+
+function clearSessionCookie(res, { secure }) {
+  const attrs = [`sid=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0']
+  if (secure) attrs.push('Secure')
+  res.setHeader('Set-Cookie', attrs.join('; '))
+}
+
+function getSecureFlag(req) {
+  const xfProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase()
+  return xfProto === 'https' // на Render обычно будет https
 }
 
 async function readJson(req, limitBytes = 1_000_000) {
@@ -269,6 +313,11 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
 
+  if (req.method === 'GET' && url.pathname === '/api/config') {
+    sendJson(res, 200, { googleClientId: GOOGLE_CLIENT_ID || null })
+    return
+  }
+
   // Serve frontend in production
   const distDir = path.join(__dirname, 'dist')
   const isProd =
@@ -332,6 +381,86 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/health') {
     sendJson(res, 200, { ok: true })
     return
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/auth/me') {
+    const cookies = parseCookies(req)
+    const sid = cookies.sid
+    if (!sid) {
+      sendJson(res, 401, { user: null })
+      return
+    }
+
+    const session = sessions.get(sid)
+    if (!session) {
+      sendJson(res, 401, { user: null })
+      return
+    }
+
+    // TTL
+    if (Date.now() - session.ts > SESSION_TTL_MS) {
+      sessions.delete(sid)
+      sendJson(res, 401, { user: null })
+      return
+    }
+
+    sendJson(res, 200, { user: session.user })
+    return
+  }
+  if (req.method === 'POST' && url.pathname === '/api/auth/logout') {
+    const cookies = parseCookies(req)
+    const sid = cookies.sid
+    if (sid) sessions.delete(sid)
+    clearSessionCookie(res, { secure: getSecureFlag(req) })
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/auth/google') {
+    try {
+      if (!googleClient || !GOOGLE_CLIENT_ID) {
+        sendJson(res, 500, { error: 'Google auth is not configured' })
+        return
+      }
+
+      const body = await readJson(req)
+      const credential = String(body?.credential ?? '')
+      if (!credential) {
+        sendJson(res, 400, { error: 'Missing credential' })
+        return
+      }
+
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID,
+      })
+      const payload = ticket.getPayload()
+      if (!payload?.sub) {
+        sendJson(res, 401, { error: 'Invalid token' })
+        return
+      }
+
+      // можно требовать email_verified
+      // if (payload.email_verified === false) ...
+
+      const user = {
+        id: payload.sub,
+        email: payload.email ?? null,
+        name: payload.name ?? null,
+        picture: payload.picture ?? null,
+      }
+
+      const sid = crypto.randomUUID()
+      sessions.set(sid, { user, ts: Date.now() })
+
+      setSessionCookie(res, sid, { secure: getSecureFlag(req) })
+      sendJson(res, 200, { user })
+      return
+    } catch (e) {
+      console.error('[auth/google] error', e)
+      sendJson(res, 401, { error: 'Auth failed' })
+      return
+    }
   }
 
   // 1) Генерация имён

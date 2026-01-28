@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useTldsStore } from '@/stores/tlds'
 import { useSuggestionsStore } from '@/stores/suggestions'
 import TldSelector from '@/components/TldSelector.vue'
+import GoogleLogin from '@/components/GoogleLogin.vue'
 
 // Сторы
 const tlds = useTldsStore()
