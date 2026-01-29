@@ -110,10 +110,12 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
     generating.value = true
 
     try {
+      const exclude = suggestions.value.map((s) => s.label).slice(0, 40)
       const data = await postJson<ApiNamesResponse>('/api/names', {
         idea: cleanedIdea,
         count: 4,
         style,
+        exclude,
       })
 
       const used = new Set<string>()

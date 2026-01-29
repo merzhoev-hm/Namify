@@ -468,6 +468,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/names') {
     try {
       const body = await readJson(req)
+      const exclude = Array.isArray(body?.exclude) ? body.exclude.map(String).slice(0, 60) : []
+      const excludeSet = new Set(exclude.map((x) => x.toLowerCase()))
       const rawIdea = String(body.idea ?? '').trim()
       const idea = stripDomainsFromIdea(rawIdea)
       const count = Math.max(1, Math.min(Number(body.count ?? 4) || 4, 12))
@@ -515,6 +517,9 @@ const server = http.createServer(async (req, res) => {
 
       const preset = presets[styleKey]
 
+      const want = Math.max(count * 4, 16)
+      const nonce = Math.random().toString(16).slice(2)
+
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
         temperature: preset.temperature,
@@ -535,7 +540,13 @@ const server = http.createServer(async (req, res) => {
           },
           {
             role: 'user',
-            content: `Идея: ${idea}\n` + `Верни ровно ${count} вариантов.\n`,
+            content:
+              `Идея: ${idea}\n` +
+              `Верни ${want} вариантов (я отфильтрую до ${count}).\n` +
+              (exclude.length
+                ? `Не используй и не повторяй эти названия: ${exclude.join(', ')}\n`
+                : '') +
+              `Соль: ${nonce}\n`,
           },
         ],
       })
@@ -555,6 +566,8 @@ const server = http.createServer(async (req, res) => {
       for (const s of suggestions) {
         const label = String(s?.label ?? '').trim()
         if (!label) continue
+        const lowerLabel = label.toLowerCase()
+        if (excludeSet.has(lowerLabel)) continue
 
         const base0 = labelToBaseStrict(label)
         if (!base0) continue
