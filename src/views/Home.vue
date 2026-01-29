@@ -13,6 +13,25 @@ const idea = ref('')
 const MAX_IDEA_LEN = 100
 const warning = ref('')
 
+type NameStyle = 'corporate' | 'creative' | 'strict' | 'premium'
+
+const STYLE_KEY = 'namify_style'
+const style = ref<NameStyle>((localStorage.getItem(STYLE_KEY) as NameStyle) || 'corporate')
+
+const styleOptions: Array<{ key: NameStyle; title: string; hint: string }> = [
+  { key: 'corporate', title: 'Corporate', hint: '2 слова, деловой стиль' },
+  { key: 'creative', title: 'Creative', hint: 'неологизмы, смелее' },
+  { key: 'strict', title: 'Strict', hint: 'простые, без лишнего' },
+  { key: 'premium', title: 'Premium', hint: 'дорого, минимализм' },
+]
+
+const styleHint = computed(() => styleOptions.find((s) => s.key === style.value)?.hint ?? '')
+
+function setStyle(s: NameStyle) {
+  style.value = s
+  localStorage.setItem(STYLE_KEY, s)
+}
+
 // Счётчик символов
 const ideaCount = computed(() => idea.value.length)
 const ideaCounterClass = computed(() =>
@@ -27,7 +46,7 @@ const canGenerate = computed(() => idea.value.trim().length >= 2 && tlds.selecte
 
 function onGenerate() {
   if (!canGenerate.value) return
-  suggestionsStore.generate(idea.value, [...tlds.selected])
+  suggestionsStore.generate(idea.value, [...tlds.selected], style.value)
 }
 
 // Следим за лимитом символов
@@ -71,6 +90,30 @@ function onInput() {
             placeholder="например: Махачкала кофе"
             class="w-full rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 px-4 py-3 outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 mb-2"
           />
+          <!-- Стиль -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium">Стиль</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ styleHint }}</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                v-for="opt in styleOptions"
+                :key="opt.key"
+                type="button"
+                @click="setStyle(opt.key)"
+                class="rounded-xl px-3 py-2 text-sm font-semibold border transition"
+                :class="
+                  style === opt.key
+                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
+                    : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100/80 dark:bg-zinc-900 dark:text-white dark:border-zinc-700 dark:hover:bg-zinc-800/80'
+                "
+              >
+                {{ opt.title }}
+              </button>
+            </div>
+          </div>
 
           <!-- TLD селектор -->
           <TldSelector />

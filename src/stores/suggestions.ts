@@ -55,7 +55,9 @@ function makeUniqueBase(base: string, used: Set<string>) {
 }
 
 function genId() {
-  return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  )
 }
 
 function stripDomainsFromIdea(idea: string) {
@@ -98,13 +100,21 @@ export const useSuggestionsStore = defineStore('suggestions', () => {
     }
   }
 
-  async function generate(idea: string, selectedTlds: string[]) {
+  async function generate(
+    idea: string,
+    selectedTlds: string[],
+    style: 'corporate' | 'creative' | 'strict' | 'premium' = 'corporate',
+  ) {
     const cleanedIdea = stripDomainsFromIdea(idea)
     if (!cleanedIdea || selectedTlds.length === 0) return
     generating.value = true
 
     try {
-      const data = await postJson<ApiNamesResponse>('/api/names', { idea: cleanedIdea, count: 4 })
+      const data = await postJson<ApiNamesResponse>('/api/names', {
+        idea: cleanedIdea,
+        count: 4,
+        style,
+      })
 
       const used = new Set<string>()
       const variants = (data.suggestions ?? [])

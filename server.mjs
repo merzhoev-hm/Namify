@@ -471,6 +471,9 @@ const server = http.createServer(async (req, res) => {
       const rawIdea = String(body.idea ?? '').trim()
       const idea = stripDomainsFromIdea(rawIdea)
       const count = Math.max(1, Math.min(Number(body.count ?? 4) || 4, 12))
+      const style = String(body?.style ?? 'corporate')
+      const STYLE = ['corporate', 'creative', 'strict', 'premium']
+      const styleKey = STYLE.includes(style) ? style : 'corporate'
 
       if (idea.length < 2) {
         sendJson(res, 400, { error: 'Idea is too short' })
@@ -483,26 +486,56 @@ const server = http.createServer(async (req, res) => {
         return
       }
 
+      const presets = {
+        corporate: {
+          temperature: 0.6,
+          system:
+            'Стиль CORPORATE: названия как NorthVector / GrowthPoint. ' +
+            'Только 2 реальных английских слова, PascalCase. Без выдуманных слогов.',
+        },
+        creative: {
+          temperature: 1.1,
+          system:
+            'Стиль CREATIVE: допускай неологизмы и неожиданные сочетания. ' +
+            'Главное — звучно и брендово.',
+        },
+        strict: {
+          temperature: 0.3,
+          system:
+            'Стиль STRICT: коротко, просто, легко произносится. ' +
+            'Без сложных букв, без лишних украшений.',
+        },
+        premium: {
+          temperature: 0.8,
+          system:
+            'Стиль PREMIUM: ощущение дорогого бренда, минимализм, уверенность. ' +
+            'Без “стартапных” суффиксов и дешёвых клише.',
+        },
+      }
+
+      const preset = presets[styleKey]
+
       const completion = await openai.chat.completions.create({
         model: OPENAI_MODEL,
-        temperature: 0.9,
+        temperature: preset.temperature,
         messages: [
           {
             role: 'system',
             content:
               'Верни ТОЛЬКО валидный JSON, без markdown и без лишнего текста.\n' +
-              'Требования:\n' +
-              '- label: СТРОГО латиницей (A-Z/a-z), если идея на кириллице/ингушском — сделай транслитерацию в латиницу.\n' +
-              '- base: это label в нижнем регистре, ТОЛЬКО a-z0-9, без дефисов.\n' +
-              '- description: строго на русском, 1  предложение.\n' +
-              'Запрещено: использовать домены/сайты из идеи (например hh.ru) и их части.\n',
+              preset.system +
+              '\n' +
+              'Общее:\n' +
+              '- label: строго латиницей (A-Z/a-z), 1 слово или PascalCase.\n' +
+              '- Запрещено: shop/store/market, project/hub/nova/flow.\n' +
+              '- Запрещено: использовать домены/сайты из идеи (например hh.ru) и их части.\n' +
+              '- description: строго на русском, 1 короткое предложение.\n' +
+              'Формат:\n' +
+              '{"suggestions":[{"label":"Name","description":"..."}]}\n',
           },
           {
             role: 'user',
-            content:
-              `Идея: ${idea}\n` +
-              `Верни ровно ${count} вариантов в формате:\n` +
-              `{"suggestions":[{"label":"...","base":"...","description":"..."}]}\n`,
+            content: `Идея: ${idea}\n` + `Верни ровно ${count} вариантов.\n`,
           },
         ],
       })
