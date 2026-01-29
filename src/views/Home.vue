@@ -19,10 +19,10 @@ const STYLE_KEY = 'namify_style'
 const style = ref<NameStyle>((localStorage.getItem(STYLE_KEY) as NameStyle) || 'corporate')
 
 const styleOptions: Array<{ key: NameStyle; title: string; hint: string }> = [
-  { key: 'corporate', title: 'Corporate', hint: '2 слова, деловой стиль' },
-  { key: 'creative', title: 'Creative', hint: 'неологизмы, смелее' },
-  { key: 'strict', title: 'Strict', hint: 'простые, без лишнего' },
-  { key: 'premium', title: 'Premium', hint: 'дорого, минимализм' },
+  { key: 'corporate', title: 'Корпоративный', hint: '2 слова, деловой стиль' },
+  { key: 'creative', title: 'Креативный', hint: 'неологизмы, смелее' },
+  { key: 'strict', title: 'Строгий', hint: 'простые, без лишнего' },
+  { key: 'premium', title: 'Премиум', hint: 'дорого, минимализм' },
 ]
 
 const styleHint = computed(() => styleOptions.find((s) => s.key === style.value)?.hint ?? '')
