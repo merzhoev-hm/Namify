@@ -120,7 +120,21 @@ function sendJson(res, status, data) {
   res.end(body)
 }
 
-function getSessionUser(req) { const cookies = parseCookies(req) const sid = cookies.sid if (!sid) return null const session = sessions.get(sid) if (!session) return null if (Date.now() - session.ts > SESSION_TTL_MS) { sessions.delete(sid) return null } return session.user || null }
+function getSessionUser(req) {
+  const cookies = parseCookies(req)
+  const sid = cookies.sid
+  if (!sid) return null
+
+  const session = sessions.get(sid)
+  if (!session) return null
+
+  if (Date.now() - session.ts > SESSION_TTL_MS) {
+    sessions.delete(sid)
+    return null
+  }
+
+  return session.user || null
+}
 
 function parseCookies(req) {
   const header = req.headers.cookie || ''
