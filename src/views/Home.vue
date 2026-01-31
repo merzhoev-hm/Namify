@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTldsStore } from '@/stores/tlds'
 import { useSuggestionsStore } from '@/stores/suggestions'
 import TldSelector from '@/components/TldSelector.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 
 // Сторы
 const tlds = useTldsStore()
 const suggestionsStore = useSuggestionsStore()
+const auth = useAuthStore()
+const fav = useFavoritesStore()
 
 // Локальный стейт
 const idea = ref('')
@@ -53,6 +57,19 @@ function onGenerate() {
 function onInput() {
   warning.value = idea.value.length >= MAX_IDEA_LEN ? 'Достигнут лимит' : ''
 }
+
+onMounted(() => {
+  auth.me().catch(() => {})
+})
+
+watch(
+  () => auth.user,
+  (u) => {
+    if (u) fav.load().catch(() => {})
+    else fav.clearLocal()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -129,6 +146,67 @@ function onInput() {
           </div>
         </form>
       </div>
+      <!-- Избранное (только после входа) -->
+      <div
+        v-if="auth.user"
+        class="mt-6 bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 rounded-2xl p-4 md:p-6 shadow-sm"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold">Избранное</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{
+                fav.loading
+                  ? 'Загрузка…'
+                  : `Имена: ${fav.names.length}, домены: ${fav.domains.length}`
+              }}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            @click="fav.load()"
+            class="text-xs font-semibold px-3 py-2 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+          >
+            Обновить
+          </button>
+        </div>
+
+        <p v-if="fav.error" class="mt-3 text-xs text-rose-500">{{ fav.error }}</p>
+
+        <div v-if="fav.names.length" class="mt-4">
+          <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Имена</div>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="n in fav.names"
+              :key="n.id"
+              class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-zinc-700 px-3 py-1 text-sm"
+            >
+              <span class="font-semibold">{{ n.value }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div v-if="fav.domains.length" class="mt-4">
+          <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Домены</div>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="d in fav.domains"
+              :key="d.id"
+              class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-zinc-700 px-3 py-1 text-sm"
+            >
+              <span class="font-semibold">{{ d.value }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div
+          v-if="!fav.loading && !fav.names.length && !fav.domains.length"
+          class="mt-4 text-sm text-gray-600 dark:text-gray-400"
+        >
+          Пока пусто — добавь ⭐ рядом с именем или доменом.
+        </div>
+      </div>
 
       <!-- Карточки -->
       <div class="mt-8 grid gap-4">
@@ -138,9 +216,23 @@ function onInput() {
           class="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-6 flex flex-col gap-3 border border-gray-100 dark:border-zinc-700 opacity-0 animate-fade-in-up"
           :style="{ animationDelay: `${idx * 120}ms`, animationFillMode: 'forwards' }"
         >
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-3">
             <span class="font-semibold text-lg dark:text-white">{{ card.label }}</span>
+
+            <button
+              v-if="auth.user"
+              type="button"
+              @click="fav.toggleName(card.label, card.description)"
+              class="rounded-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+              :class="
+                fav.isFavName(card.label) ? 'bg-black text-white dark:bg-white dark:text-black' : ''
+              "
+              aria-label="В избранное"
+            >
+              {{ fav.isFavName(card.label) ? '★' : '☆' }}
+            </button>
           </div>
+
           <p class="text-sm text-gray-600 dark:text-gray-400">{{ card.description }}</p>
 
           <button
@@ -179,7 +271,24 @@ function onInput() {
                 :key="item.fqdn"
                 class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-zinc-800"
               >
-                <div class="text-sm font-medium">{{ item.fqdn }}</div>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-if="auth.user"
+                    type="button"
+                    @click="fav.toggleDomain(item.fqdn)"
+                    class="text-sm px-2 py-1 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+                    :class="
+                      fav.isFavDomain(item.fqdn)
+                        ? 'bg-black text-white dark:bg-white dark:text-black'
+                        : ''
+                    "
+                    aria-label="В избранное"
+                  >
+                    {{ fav.isFavDomain(item.fqdn) ? '★' : '☆' }}
+                  </button>
+
+                  <div class="text-sm font-medium">{{ item.fqdn }}</div>
+                </div>
 
                 <div class="flex items-center gap-2">
                   <a
