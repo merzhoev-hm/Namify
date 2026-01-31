@@ -7,6 +7,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import OpenAI from 'openai'
+import pg from 'pg'
+
+const { Pool } = pg
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -14,6 +17,7 @@ const __dirname = path.dirname(__filename)
 // ВАЖНО: это in-memory сессии (на бесплатном Render могут пропадать после сна/рестарта)
 const sessions = new Map() // sid -> { user, ts }
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7 // 7 дней
+const MAX_FAVORITES = 30
 
 /** Минималистичная загрузка .env без зависимостей */
 function loadEnvFile(filePath) {
@@ -52,6 +56,51 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'llama-3.3-70b-versatile'
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 
+const DATABASE_URL = process.env.DATABASE_URL || ''
+const pool = DATABASE_URL
+  ? new Pool({
+      connectionString: DATABASE_URL,
+      ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+    })
+  : null
+
+async function db(query, params = []) {
+  if (!pool) throw new Error('DB not configured')
+  const client = await pool.connect()
+  try {
+    const r = await client.query(query, params)
+    return r
+  } finally {
+    client.release()
+  }
+}
+
+async function ensureSchema() {
+  if (!pool) return
+  await db(`
+    create table if not exists users (
+      id text primary key,
+      email text,
+      name text,
+      picture text,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now()
+    );
+
+    create table if not exists favorites (
+      id bigserial primary key,
+      user_id text not null references users(id) on delete cascade,
+      kind text not null check (kind in ('name','domain')),
+      value text not null,
+      description text,
+      created_at timestamptz default now(),
+      unique(user_id, kind, value)
+    );
+  `)
+}
+
+ensureSchema().catch((e) => console.error('[db] schema error', e))
+
 const openai = OPENAI_API_KEY
   ? new OpenAI({
       apiKey: OPENAI_API_KEY,
@@ -70,6 +119,8 @@ function sendJson(res, status, data) {
   })
   res.end(body)
 }
+
+function getSessionUser(req) { const cookies = parseCookies(req) const sid = cookies.sid if (!sid) return null const session = sessions.get(sid) if (!session) return null if (Date.now() - session.ts > SESSION_TTL_MS) { sessions.delete(sid) return null } return session.user || null }
 
 function parseCookies(req) {
   const header = req.headers.cookie || ''
@@ -450,6 +501,23 @@ const server = http.createServer(async (req, res) => {
         name: payload.name ?? null,
         picture: payload.picture ?? null,
       }
+      try {
+        if (pool) {
+          await db(
+            `insert into users (id, email, name, picture)
+     values ($1,$2,$3,$4)
+     on conflict (id) do update set
+       email = excluded.email,
+       name = excluded.name,
+       picture = excluded.picture,
+       updated_at = now()
+    `,
+            [user.id, user.email, user.name, user.picture],
+          )
+        }
+      } catch (e) {
+        console.error('[db] upsert user error', e)
+      }
 
       const sid = crypto.randomUUID()
       sessions.set(sid, { user, ts: Date.now() })
@@ -463,6 +531,39 @@ const server = http.createServer(async (req, res) => {
       return
     }
   }
+if (req.method === 'GET' && url.pathname === '/api/favorites') {
+  const user = getSessionUser(req)
+  if (!user) {
+    sendJson(res, 401, { error: 'Unauthorized' })
+    return
+  }
+  if (!pool) {
+    sendJson(res, 500, { error: 'DB not configured' })
+    return
+  }
+
+  const r = await db(
+    `select id, kind, value, description, created_at
+     from favorites
+     where user_id = $1
+     order by created_at desc
+     limit 100`,
+    [user.id],
+  )
+
+  sendJson(res, 200, {
+    items: r.rows.map((x) => ({
+      id: x.id,
+      kind: x.kind,
+      value: x.value,
+      description: x.description,
+      createdAt: x.created_at,
+    })),
+  })
+  return
+}
+
+if (req.method === 'POST' && url.pathname === '/api/favorites/toggle') { const user = getSessionUser(req) if (!user) { sendJson(res, 401, { error: 'Unauthorized' }) return } if (!pool) { sendJson(res, 500, { error: 'DB not configured' }) return } const body = await readJson(req) const kind = String(body?.kind ?? '') const value = String(body?.value ?? '').trim() const description = body?.description ? String(body.description).trim() : null if (!['name', 'domain'].includes(kind) || !value) { sendJson(res, 400, { error: 'Bad request' }) return } // есть уже? const exists = await db( select id from favorites where user_id=$1 and kind=$2 and value=$3, [user.id, kind, value.toLowerCase()], ) if (exists.rowCount > 0) { await db(delete from favorites where user_id=$1 and kind=$2 and value=$3, [ user.id, kind, value.toLowerCase(), ]) sendJson(res, 200, { ok: true, action: 'removed' }) return } const cnt = await db(select count(*)::int as c from favorites where user_id=$1, [user.id]) if (cnt.rows[0].c >= MAX_FAVORITES) { sendJson(res, 409, { error: Лимит избранного: ${MAX_FAVORITES} }) return } await db( insert into favorites (user_id, kind, value, description) values ($1,$2,$3,$4), [user.id, kind, value.toLowerCase(), kind === 'name' ? description : null], ) sendJson(res, 200, { ok: true, action: 'added' }) return }
 
   // 1) Генерация имён
   if (req.method === 'POST' && url.pathname === '/api/names') {
