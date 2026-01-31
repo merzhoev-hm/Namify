@@ -545,39 +545,94 @@ const server = http.createServer(async (req, res) => {
       return
     }
   }
-if (req.method === 'GET' && url.pathname === '/api/favorites') {
-  const user = getSessionUser(req)
-  if (!user) {
-    sendJson(res, 401, { error: 'Unauthorized' })
-    return
-  }
-  if (!pool) {
-    sendJson(res, 500, { error: 'DB not configured' })
-    return
-  }
+  if (req.method === 'GET' && url.pathname === '/api/favorites') {
+    const user = getSessionUser(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Unauthorized' })
+      return
+    }
+    if (!pool) {
+      sendJson(res, 500, { error: 'DB not configured' })
+      return
+    }
 
-  const r = await db(
-    `select id, kind, value, description, created_at
+    const r = await db(
+      `select id, kind, value, description, created_at
      from favorites
      where user_id = $1
      order by created_at desc
      limit 100`,
-    [user.id],
-  )
+      [user.id],
+    )
 
-  sendJson(res, 200, {
-    items: r.rows.map((x) => ({
-      id: x.id,
-      kind: x.kind,
-      value: x.value,
-      description: x.description,
-      createdAt: x.created_at,
-    })),
-  })
-  return
-}
+    sendJson(res, 200, {
+      items: r.rows.map((x) => ({
+        id: x.id,
+        kind: x.kind,
+        value: x.value,
+        description: x.description,
+        createdAt: x.created_at,
+      })),
+    })
+    return
+  }
 
-if (req.method === 'POST' && url.pathname === '/api/favorites/toggle') { const user = getSessionUser(req) if (!user) { sendJson(res, 401, { error: 'Unauthorized' }) return } if (!pool) { sendJson(res, 500, { error: 'DB not configured' }) return } const body = await readJson(req) const kind = String(body?.kind ?? '') const value = String(body?.value ?? '').trim() const description = body?.description ? String(body.description).trim() : null if (!['name', 'domain'].includes(kind) || !value) { sendJson(res, 400, { error: 'Bad request' }) return } // есть уже? const exists = await db( select id from favorites where user_id=$1 and kind=$2 and value=$3, [user.id, kind, value.toLowerCase()], ) if (exists.rowCount > 0) { await db(delete from favorites where user_id=$1 and kind=$2 and value=$3, [ user.id, kind, value.toLowerCase(), ]) sendJson(res, 200, { ok: true, action: 'removed' }) return } const cnt = await db(select count(*)::int as c from favorites where user_id=$1, [user.id]) if (cnt.rows[0].c >= MAX_FAVORITES) { sendJson(res, 409, { error: Лимит избранного: ${MAX_FAVORITES} }) return } await db( insert into favorites (user_id, kind, value, description) values ($1,$2,$3,$4), [user.id, kind, value.toLowerCase(), kind === 'name' ? description : null], ) sendJson(res, 200, { ok: true, action: 'added' }) return }
+  if (req.method === 'POST' && url.pathname === '/api/favorites/toggle') {
+    const user = getSessionUser(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Unauthorized' })
+      return
+    }
+
+    if (!pool) {
+      sendJson(res, 500, { error: 'DB not configured' })
+      return
+    }
+
+    const body = await readJson(req)
+    const kind = String(body?.kind ?? '')
+    const valueRaw = String(body?.value ?? '').trim()
+    const description = body?.description ? String(body.description).trim() : null
+
+    if (!['name', 'domain'].includes(kind) || !valueRaw) {
+      sendJson(res, 400, { error: 'Bad request' })
+      return
+    }
+
+    const value = valueRaw.toLowerCase()
+
+    // уже есть?
+    const exists = await db(`select id from favorites where user_id=$1 and kind=$2 and value=$3`, [
+      user.id,
+      kind,
+      value,
+    ])
+
+    if (exists.rowCount > 0) {
+      await db(`delete from favorites where user_id=$1 and kind=$2 and value=$3`, [
+        user.id,
+        kind,
+        value,
+      ])
+      sendJson(res, 200, { ok: true, action: 'removed' })
+      return
+    }
+
+    const cnt = await db(`select count(*)::int as c from favorites where user_id=$1`, [user.id])
+    if (cnt.rows[0].c >= MAX_FAVORITES) {
+      sendJson(res, 409, { error: `Лимит избранного: ${MAX_FAVORITES}` })
+      return
+    }
+
+    await db(
+      `insert into favorites (user_id, kind, value, description)
+     values ($1,$2,$3,$4)`,
+      [user.id, kind, value, kind === 'name' ? description : null],
+    )
+
+    sendJson(res, 200, { ok: true, action: 'added' })
+    return
+  }
 
   // 1) Генерация имён
   if (req.method === 'POST' && url.pathname === '/api/names') {
