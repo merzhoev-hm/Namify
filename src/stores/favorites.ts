@@ -120,6 +120,16 @@ export const useFavoritesStore = defineStore('favorites', () => {
     error.value = ''
   }
 
+  async function removeFavorite(kind: 'name' | 'domain', value: string) {
+    error.value = ''
+    try {
+      await postJson('/api/favorites/toggle', { kind, value: value.toLowerCase() })
+      await load()
+    } catch (e: any) {
+      error.value = e?.error ? String(e.error) : 'Не удалось удалить'
+    }
+  }
+
   return {
     items,
     names,
@@ -133,5 +143,6 @@ export const useFavoritesStore = defineStore('favorites', () => {
     toggleName,
     toggleDomain,
     clearLocal,
+    removeFavorite,
   }
 })

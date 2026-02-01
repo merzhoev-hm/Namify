@@ -183,6 +183,16 @@ watch(
               class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-zinc-700 px-3 py-1 text-sm"
             >
               <span class="font-semibold">{{ n.value }}</span>
+
+              <button
+                type="button"
+                @click="fav.removeFavorite('name', n.value)"
+                class="text-xs opacity-60 hover:opacity-100"
+                aria-label="Удалить из избранного"
+                title="Удалить"
+              >
+                ✕
+              </button>
             </span>
           </div>
         </div>
@@ -196,6 +206,16 @@ watch(
               class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-zinc-700 px-3 py-1 text-sm"
             >
               <span class="font-semibold">{{ d.value }}</span>
+
+              <button
+                type="button"
+                @click="fav.removeFavorite('domain', d.value)"
+                class="text-xs opacity-60 hover:opacity-100"
+                aria-label="Удалить из избранного"
+                title="Удалить"
+              >
+                ✕
+              </button>
             </span>
           </div>
         </div>
