@@ -545,6 +545,24 @@ const server = http.createServer(async (req, res) => {
       return
     }
   }
+
+  if (req.method === 'POST' && url.pathname === '/api/favorites/clear') {
+    const user = getSessionUser(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Unauthorized' })
+      return
+    }
+
+    if (!pool) {
+      sendJson(res, 500, { error: 'DB not configured' })
+      return
+    }
+
+    await db(`delete from favorites where user_id = $1`, [user.id])
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/favorites') {
     const user = getSessionUser(req)
     if (!user) {

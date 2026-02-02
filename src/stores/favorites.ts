@@ -113,6 +113,16 @@ export const useFavoritesStore = defineStore('favorites', () => {
     }
   }
 
+  async function clearAll() {
+    error.value = ''
+    try {
+      await postJson('/api/favorites/clear')
+      await load()
+    } catch (e: any) {
+      error.value = e?.error ? String(e.error) : 'Не удалось очистить избранное'
+    }
+  }
+
   function clearLocal() {
     items.value = []
     loaded.value = false
@@ -144,5 +154,6 @@ export const useFavoritesStore = defineStore('favorites', () => {
     toggleDomain,
     clearLocal,
     removeFavorite,
+    clearAll,
   }
 })

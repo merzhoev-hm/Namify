@@ -165,10 +165,11 @@ watch(
 
           <button
             type="button"
-            @click="fav.load()"
-            class="text-xs font-semibold px-3 py-2 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+            @click="fav.clearAll()"
+            :disabled="fav.loading"
+            class="text-xs font-semibold px-3 py-2 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Обновить
+            Очистить всё
           </button>
         </div>
 
