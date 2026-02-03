@@ -8,10 +8,6 @@ import GoogleLoginButton from '@/components/GoogleLoginButton.vue'
 const auth = useAuthStore()
 const authOpen = ref(false)
 
-onMounted(() => {
-  auth.me().catch(() => {})
-})
-
 // если вошли — закрываем модалку
 watchEffect(() => {
   if (auth.user) authOpen.value = false
