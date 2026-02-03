@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTldsStore } from '@/stores/tlds'
 import { useSuggestionsStore } from '@/stores/suggestions'
 import TldSelector from '@/components/TldSelector.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
+import SuggestionCard from '@/components/SuggestionCard.vue'
 
 // Сторы
 const tlds = useTldsStore()
@@ -57,10 +58,6 @@ function onGenerate() {
 function onInput() {
   warning.value = idea.value.length >= MAX_IDEA_LEN ? 'Достигнут лимит' : ''
 }
-
-onMounted(() => {
-  auth.me().catch(() => {})
-})
 
 watch(
   () => auth.user,
@@ -234,118 +231,10 @@ watch(
         <div
           v-for="(card, idx) in suggestionsStore.suggestions"
           :key="card.id"
-          class="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-6 flex flex-col gap-3 border border-gray-100 dark:border-zinc-700 opacity-0 animate-fade-in-up"
+          class="opacity-0 animate-fade-in-up"
           :style="{ animationDelay: `${idx * 120}ms`, animationFillMode: 'forwards' }"
         >
-          <div class="flex items-center justify-between gap-3">
-            <span class="font-semibold text-lg dark:text-white">{{ card.label }}</span>
-
-            <button
-              v-if="auth.user"
-              type="button"
-              @click="fav.toggleName(card.label, card.description)"
-              class="rounded-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
-              :class="
-                fav.isFavName(card.label) ? 'bg-black text-white dark:bg-white dark:text-black' : ''
-              "
-              aria-label="В избранное"
-            >
-              {{ fav.isFavName(card.label) ? '★' : '☆' }}
-            </button>
-          </div>
-
-          <p class="text-sm text-gray-600 dark:text-gray-400">{{ card.description }}</p>
-
-          <button
-            @click="card.open = !card.open"
-            class="mt-1 self-start text-xs font-semibold inline-flex items-center gap-2 border border-black dark:border-white rounded-full px-3 py-2 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
-          >
-            Показать варианты домена
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              class="h-4 w-4 transition-transform duration-300"
-              :class="{ 'rotate-90': card.open }"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-
-          <Transition
-            enter-active-class="transition-all duration-500 ease-out"
-            enter-from-class="max-h-0 opacity-0"
-            enter-to-class="max-h-96 opacity-100"
-            leave-active-class="transition-all duration-500 ease-in"
-            leave-from-class="max-h-96 opacity-100"
-            leave-to-class="max-h-0 opacity-0"
-          >
-            <div v-if="card.open" class="mt-2 overflow-hidden">
-              <div
-                v-for="item in card.items"
-                :key="item.fqdn"
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-zinc-800"
-              >
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="auth.user"
-                    type="button"
-                    @click="fav.toggleDomain(item.fqdn)"
-                    class="text-sm px-2 py-1 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
-                    :class="
-                      fav.isFavDomain(item.fqdn)
-                        ? 'bg-black text-white dark:bg-white dark:text-black'
-                        : ''
-                    "
-                    aria-label="В избранное"
-                  >
-                    {{ fav.isFavDomain(item.fqdn) ? '★' : '☆' }}
-                  </button>
-
-                  <div class="text-sm font-medium">{{ item.fqdn }}</div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <a
-                    v-if="!item.checking && item.status === 'available'"
-                    :href="item.registerUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-xs font-semibold px-3 py-1 rounded-full border border-black dark:border-white hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
-                  >
-                    Зарегистрировать домен
-                  </a>
-
-                  <span
-                    class="text-xs font-semibold px-2 py-1 rounded-full"
-                    :class="{
-                      'bg-slate-500 text-white': item.checking,
-                      'bg-emerald-500 text-white': !item.checking && item.status === 'available',
-                      'bg-rose-500 text-white': !item.checking && item.status === 'taken',
-                      'bg-gray-900 text-white dark:bg-white dark:text-black':
-                        !item.checking && item.status === 'unknown',
-                    }"
-                  >
-                    {{
-                      item.checking
-                        ? 'Проверяем...'
-                        : item.status === 'available'
-                          ? 'Доступен'
-                          : item.status === 'taken'
-                            ? 'Занят'
-                            : 'Неизвестно'
-                    }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Transition>
+          <SuggestionCard :suggestion="card" />
         </div>
       </div>
     </div>

@@ -10,7 +10,9 @@ export type AuthUser = {
 
 async function getJson<T>(url: string): Promise<T> {
   const r = await fetch(url, { credentials: 'include' })
-  return (await r.json()) as T
+  const data = (await r.json()) as T
+  if (!r.ok) throw data
+  return data
 }
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
@@ -20,7 +22,9 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body ?? {}),
   })
-  return (await r.json()) as T
+  const data = (await r.json()) as T
+  if (!r.ok) throw data
+  return data
 }
 
 export const useAuthStore = defineStore('auth', () => {
