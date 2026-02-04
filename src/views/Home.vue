@@ -5,8 +5,15 @@ import { useSuggestionsStore } from '@/stores/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import SuggestionCard from '@/components/SuggestionCard.vue'
+
 import IdeaForm from '@/components/IdeaForm.vue'
 import FavoritesPanel from '@/components/FavoritesPanel.vue'
+
+
+import IdeaForm from '@/components/IdeaForm.vue'
+import FavoritesPanel from '@/components/FavoritesPanel.vue'
+
+
 
 // Сторы
 const tlds = useTldsStore()
