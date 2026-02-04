@@ -10,6 +10,28 @@ const ready = ref(false)
 
 let ro: ResizeObserver | null = null
 
+type GoogleCredentialResponse = { credential: string }
+
+type GoogleAccounts = {
+  accounts: {
+    id: {
+      renderButton: (
+        element: HTMLElement,
+        options: {
+          theme: 'outline'
+          size: 'large'
+          shape: 'pill'
+          text: 'signin_with'
+          width: number
+        },
+      ) => void
+      initialize: (options: { client_id: string; callback: (resp: GoogleCredentialResponse) => void }) => void
+    }
+  }
+}
+
+declare const google: GoogleAccounts
+
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
     const exists = document.querySelector(`script[src="${src}"]`)
@@ -33,7 +55,6 @@ function renderGoogleButton() {
   // Перерисовываем кнопку (иначе будет “сужаться/прыгать”)
   mountEl.value.innerHTML = ''
 
-  // @ts-ignore
   google.accounts.id.renderButton(mountEl.value, {
     theme: 'outline',
     size: 'large',
@@ -58,10 +79,9 @@ onMounted(async () => {
     // грузим GIS
     await loadScript('https://accounts.google.com/gsi/client')
 
-    // @ts-ignore
     google.accounts.id.initialize({
       client_id: clientId,
-      callback: async (resp: any) => {
+      callback: async (resp: GoogleCredentialResponse) => {
         try {
           await auth.loginWithGoogleCredential(resp.credential)
         } catch {

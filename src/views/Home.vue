@@ -10,6 +10,11 @@ import IdeaForm from '@/components/IdeaForm.vue'
 import FavoritesPanel from '@/components/FavoritesPanel.vue'
 
 
+import IdeaForm from '@/components/IdeaForm.vue'
+import FavoritesPanel from '@/components/FavoritesPanel.vue'
+
+
+
 // Сторы
 const tlds = useTldsStore()
 const suggestionsStore = useSuggestionsStore()

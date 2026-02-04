@@ -57,6 +57,13 @@ export const useFavoritesStore = defineStore('favorites', () => {
     return domainSet.value.has(fqdn.toLowerCase())
   }
 
+  function resolveErrorMessage(error: unknown, fallback: string) {
+    if (error && typeof error === 'object' && 'error' in error) {
+      return String((error as { error?: unknown }).error ?? fallback)
+    }
+    return fallback
+  }
+
   async function load() {
     loading.value = true
     error.value = ''
@@ -64,14 +71,14 @@ export const useFavoritesStore = defineStore('favorites', () => {
       const data = await getJson<{ items: FavoriteRow[] }>('/api/favorites')
       items.value = Array.isArray(data.items) ? data.items : []
       loaded.value = true
-    } catch (e: any) {
+    } catch (e: unknown) {
       // если не авторизован — просто считаем что избранного “нет”
-      if (e?.error === 'Unauthorized') {
+      if (e && typeof e === 'object' && 'error' in e && (e as { error?: unknown }).error === 'Unauthorized') {
         items.value = []
         loaded.value = false
         return
       }
-      error.value = e?.error ? String(e.error) : 'Не удалось загрузить избранное'
+      error.value = resolveErrorMessage(e, 'Не удалось загрузить избранное')
     } finally {
       loading.value = false
     }
@@ -91,9 +98,9 @@ export const useFavoritesStore = defineStore('favorites', () => {
         description: description ?? null,
       })
       await load()
-    } catch (e: any) {
+    } catch (e: unknown) {
       // лимит
-      error.value = e?.error ? String(e.error) : 'Не удалось сохранить'
+      error.value = resolveErrorMessage(e, 'Не удалось сохранить')
       // откат не нужен — мы после load синхронизируемся
       if (had) await load()
     }
@@ -107,8 +114,8 @@ export const useFavoritesStore = defineStore('favorites', () => {
     try {
       await postJson('/api/favorites/toggle', { kind: 'domain', value })
       await load()
-    } catch (e: any) {
-      error.value = e?.error ? String(e.error) : 'Не удалось сохранить'
+    } catch (e: unknown) {
+      error.value = resolveErrorMessage(e, 'Не удалось сохранить')
       if (had) await load()
     }
   }
@@ -118,8 +125,8 @@ export const useFavoritesStore = defineStore('favorites', () => {
     try {
       await postJson('/api/favorites/clear')
       await load()
-    } catch (e: any) {
-      error.value = e?.error ? String(e.error) : 'Не удалось очистить избранное'
+    } catch (e: unknown) {
+      error.value = resolveErrorMessage(e, 'Не удалось очистить избранное')
     }
   }
 
@@ -135,8 +142,8 @@ export const useFavoritesStore = defineStore('favorites', () => {
     try {
       await postJson('/api/favorites/toggle', { kind, value: value.toLowerCase() })
       await load()
-    } catch (e: any) {
-      error.value = e?.error ? String(e.error) : 'Не удалось удалить'
+    } catch (e: unknown) {
+      error.value = resolveErrorMessage(e, 'Не удалось удалить')
     }
   }
 
