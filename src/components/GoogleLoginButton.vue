@@ -34,6 +34,28 @@ type GoogleAccounts = {
 
 declare const google: GoogleAccounts
 
+type GoogleCredentialResponse = { credential: string }
+
+type GoogleAccounts = {
+  accounts: {
+    id: {
+      renderButton: (
+        element: HTMLElement,
+        options: {
+          theme: 'outline'
+          size: 'large'
+          shape: 'pill'
+          text: 'signin_with'
+          width: number
+        },
+      ) => void
+      initialize: (options: { client_id: string; callback: (resp: GoogleCredentialResponse) => void }) => void
+    }
+  }
+}
+
+declare const google: GoogleAccounts
+
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
     const exists = document.querySelector(`script[src="${src}"]`)
