@@ -9,6 +9,30 @@ const error = ref<string>('')
 const ready = ref(false)
 
 let ro: ResizeObserver | null = null
+let lastWidth = 0
+let rerenderFrame = 0
+
+type GoogleCredentialResponse = { credential: string }
+
+type GoogleAccounts = {
+  accounts: {
+    id: {
+      renderButton: (
+        element: HTMLElement,
+        options: {
+          theme: 'outline'
+          size: 'large'
+          shape: 'pill'
+          text: 'signin_with'
+          width: number
+        },
+      ) => void
+      initialize: (options: { client_id: string; callback: (resp: GoogleCredentialResponse) => void }) => void
+    }
+  }
+}
+
+declare const google: GoogleAccounts
 
 type GoogleCredentialResponse = { credential: string }
 
@@ -51,6 +75,8 @@ function renderGoogleButton() {
 
   // Контейнер обязан быть видимым, иначе ширина будет 0
   const width = mountEl.value.clientWidth || 320
+  if (width === lastWidth) return
+  lastWidth = width
 
   // Перерисовываем кнопку (иначе будет “сужаться/прыгать”)
   mountEl.value.innerHTML = ''
@@ -97,7 +123,10 @@ onMounted(async () => {
       // Следим за изменением ширины (мобилка/ресайз) и перерисовываем
       ro = new ResizeObserver(() => {
         // если кнопка уже отрисована — перерисуем под новую ширину
-        if (mountEl.value) renderGoogleButton()
+        if (mountEl.value) {
+          cancelAnimationFrame(rerenderFrame)
+          rerenderFrame = requestAnimationFrame(() => renderGoogleButton())
+        }
       })
       ro.observe(mountEl.value)
     }
@@ -108,6 +137,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   ro?.disconnect()
+  cancelAnimationFrame(rerenderFrame)
 })
 </script>
 
