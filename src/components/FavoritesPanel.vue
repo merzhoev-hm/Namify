@@ -22,7 +22,7 @@ const emit = defineEmits<{
     class="group mt-6 bg-white dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800 rounded-2xl p-4 md:p-6 shadow-sm"
     open
   >
-    <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+    <summary class="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div class="text-sm font-semibold">Избранное</div>
         <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -32,7 +32,7 @@ const emit = defineEmits<{
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
         <button
           type="button"
           @click="emit('clearAll')"
@@ -109,3 +109,12 @@ const emit = defineEmits<{
     </div>
   </details>
 </template>
+
+<style scoped>
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  content: '';
+}
+</style>
