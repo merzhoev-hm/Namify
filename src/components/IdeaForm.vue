@@ -36,7 +36,6 @@ function onStyleSelect(event: Event) {
   const value = (target?.value ?? props.style) as NameStyle
   emit('setStyle', value)
 }
-
 </script>
 
 <template>
@@ -47,9 +46,7 @@ function onStyleSelect(event: Event) {
       <label class="text-sm font-medium">Идея проекта</label>
       <div class="flex items-center gap-2">
         <span v-if="warning" class="text-xs text-rose-500 font-medium">{{ warning }}</span>
-        <span class="text-xs" :class="ideaCounterClass">
-          {{ ideaCount }}/{{ maxIdeaLen }}
-        </span>
+        <span class="text-xs" :class="ideaCounterClass"> {{ ideaCount }}/{{ maxIdeaLen }} </span>
       </div>
     </div>
 
@@ -83,24 +80,24 @@ function onStyleSelect(event: Event) {
         </div>
 
         <div class="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button
-            v-for="opt in styleOptions"
-            :key="opt.key"
-            type="button"
-            @click="emit('setStyle', opt.key)"
-            class="rounded-xl px-3 py-2 text-sm font-semibold border transition"
-            :class="
-              style === opt.key
-                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
-                : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100/80 dark:bg-zinc-900 dark:text-white dark:border-zinc-700 dark:hover:bg-zinc-800/80'
-            "
-          >
-            {{ opt.title }}
-          </button>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              v-for="opt in styleOptions"
+              :key="opt.key"
+              type="button"
+              @click="emit('setStyle', opt.key)"
+              class="rounded-xl px-3 py-2 text-sm font-semibold border transition"
+              :class="
+                style === opt.key
+                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
+                  : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100/80 dark:bg-zinc-900 dark:text-white dark:border-zinc-700 dark:hover:bg-zinc-800/80'
+              "
+            >
+              {{ opt.title }}
+            </button>
+          </div>
         </div>
       </div>
-
       <!-- TLD селектор -->
       <TldSelector />
 
