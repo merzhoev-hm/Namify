@@ -27,9 +27,10 @@ const tlds = useTldsStore()
 
     <details class="sm:hidden">
       <summary
-        class="cursor-pointer select-none text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 px-3 py-2"
+        class="flex cursor-pointer select-none items-center justify-between text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 px-3 py-2"
       >
-        Выбрано: {{ tlds.selected.length }}
+        <span>Выбрано: {{ tlds.selected.length }}</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">▾</span>
       </summary>
       <div class="mt-3 flex flex-wrap gap-2">
         <label
