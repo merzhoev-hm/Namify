@@ -42,7 +42,8 @@ export function buildRegisterUrl(domain: string) {
   return REGISTER_URL_TEMPLATE.replace('{domain}', encodeURIComponent(domain))
 }
 
-export function generateDescription(name: string) {
+export function generateDescription(_name: string) {
+  void _name
   const hints = [
     'Легко запоминается',
     'Подходит для стартапа',

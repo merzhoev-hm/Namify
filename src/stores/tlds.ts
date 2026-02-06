@@ -1,6 +1,6 @@
 // src/stores/tlds.ts
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export const DEFAULT_TLDS = [
   'com',
@@ -19,7 +19,6 @@ export const useTldsStore = defineStore('tlds', () => {
   const all = ref<string[]>([...DEFAULT_TLDS])
   const selected = ref<string[]>(['com', 'ru'])
 
-  const selectedSet = computed(() => new Set(selected.value))
   const has = (tld: string) => selected.value.includes(tld)
 
   function toggle(tld: string) {
@@ -39,7 +38,6 @@ export const useTldsStore = defineStore('tlds', () => {
   return {
     all,
     selected,
-    selectedSet,
     has,
     toggle,
     selectAll,

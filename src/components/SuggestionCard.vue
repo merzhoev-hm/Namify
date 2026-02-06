@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { toRef } from 'vue'
 import type { Suggestion } from '@/stores/suggestions'
+import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 
 const props = defineProps<{ suggestion: Suggestion }>()
-const open = ref(false)
+const suggestion = toRef(props, 'suggestion')
+const auth = useAuthStore()
+const fav = useFavoritesStore()
 
-function statusClass(status: string) {
+function toggleOpen() {
+  suggestion.value.open = !suggestion.value.open
+}
+
+function statusClass(status: string, checking: boolean) {
+  if (checking) return 'bg-slate-500 text-white'
   return status === 'available'
     ? 'bg-emerald-500 text-white'
     : status === 'taken'
@@ -18,29 +27,41 @@ function statusClass(status: string) {
   <div
     class="rounded-2xl p-6 border shadow-lg bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-700"
   >
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div class="text-lg font-semibold dark:text-white">{{ suggestion.label }}</div>
-        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {{ suggestion.description }}
-        </div>
       </div>
 
-      <!-- (раньше здесь был блок с оценкой — удалён) -->
+      <button
+        v-if="auth.user"
+        type="button"
+        @click="fav.toggleName(suggestion.label, suggestion.description)"
+        :class="[
+          'self-start rounded-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80',
+          fav.isFavName(suggestion.label) ? 'bg-black text-white dark:bg-white dark:text-black' : '',
+        ]"
+        aria-label="В избранное"
+      >
+        {{ fav.isFavName(suggestion.label) ? '★' : '☆' }}
+      </button>
     </div>
+
+    <p class="text-sm text-gray-600 dark:text-gray-400">{{ suggestion.description }}</p>
 
     <div class="mt-4">
       <button
-        @click="open = !open"
-        class="text-xs font-semibold inline-flex items-center gap-2 border rounded-full px-3 py-2 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+        @click="toggleOpen"
+        class="w-full sm:w-auto text-xs font-semibold inline-flex items-center justify-center gap-2 border border-black dark:border-white rounded-full px-3 py-2 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
       >
         <!-- статичный текст кнопки, не меняется в зависимости от состояния -->
         Показать варианты домена
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          class="h-4 w-4 transition-transform duration-300"
-          :class="{ 'rotate-90': open }"
+          :class="[
+            'h-4 w-4 transition-transform duration-300',
+            suggestion.open ? 'rotate-90' : '',
+          ]"
           fill="none"
           stroke="currentColor"
         >
@@ -48,7 +69,7 @@ function statusClass(status: string) {
         </svg>
       </button>
 
-      <transition
+      <Transition
         enter-active-class="transition-all duration-500 ease-out"
         enter-from-class="max-h-0 opacity-0"
         enter-to-class="max-h-96 opacity-100"
@@ -56,41 +77,55 @@ function statusClass(status: string) {
         leave-from-class="max-h-96 opacity-100"
         leave-to-class="max-h-0 opacity-0"
       >
-        <div v-if="open" class="mt-3 overflow-hidden">
+        <div v-if="suggestion.open" class="mt-2 overflow-hidden">
           <div
             v-for="item in suggestion.items"
             :key="item.fqdn"
-            class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-zinc-800"
+            class="flex flex-col gap-2 py-2 border-b border-gray-100 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between"
           >
-            <div class="text-sm">
-              <div class="font-medium">{{ item.fqdn }}</div>
-            </div>
             <div class="flex items-center gap-2">
+              <button
+                v-if="auth.user"
+                type="button"
+                @click="fav.toggleDomain(item.fqdn)"
+                :class="[
+                  'text-sm px-2 py-1 rounded-full border border-gray-200 dark:border-zinc-700 hover:bg-gray-100/90 dark:hover:bg-zinc-800/80',
+                  fav.isFavDomain(item.fqdn)
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : '',
+                ]"
+                aria-label="В избранное"
+              >
+                {{ fav.isFavDomain(item.fqdn) ? '★' : '☆' }}
+              </button>
+
+              <div class="text-sm font-medium">{{ item.fqdn }}</div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
               <a
-                v-if="item.status === 'available'"
+                v-if="!item.checking && item.status === 'available'"
                 :href="item.registerUrl"
                 target="_blank"
-                rel="noopener"
-                class="text-xs font-semibold px-3 py-2 border rounded-full"
+                rel="noopener noreferrer"
+                class="text-xs font-semibold px-3 py-1 rounded-full border border-black dark:border-white hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
               >
-                Зарегистрировать
+                Зарегистрировать домен
               </a>
-              <span
-                class="text-xs font-semibold px-2 py-1 rounded-full"
-                :class="statusClass(item.status)"
-              >
+              <span :class="['text-xs font-semibold px-2 py-1 rounded-full', statusClass(item.status, item.checking)]">
                 {{
-                  item.status === 'available'
-                    ? 'Доступен'
-                    : item.status === 'taken'
-                      ? 'Занят'
-                      : 'Неизвестно'
+                  item.checking
+                    ? 'Проверяем...'
+                    : item.status === 'available'
+                      ? 'Доступен'
+                      : item.status === 'taken'
+                        ? 'Занят'
+                        : 'Неизвестно'
                 }}
               </span>
             </div>
           </div>
         </div>
-      </transition>
+      </Transition>
     </div>
   </div>
 </template>
