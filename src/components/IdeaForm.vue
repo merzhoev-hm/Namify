@@ -30,6 +30,13 @@ function onIdeaInput(event: Event) {
   emit('update:idea', target?.value ?? '')
   emit('input')
 }
+
+function onStyleSelect(event: Event) {
+  const target = event.target as HTMLSelectElement | null
+  const value = (target?.value ?? props.style) as NameStyle
+  emit('setStyle', value)
+}
+
 </script>
 
 <template>
@@ -63,6 +70,19 @@ function onIdeaInput(event: Event) {
           <span class="text-xs text-gray-500 dark:text-gray-400">{{ styleHint }}</span>
         </div>
 
+        <div class="sm:hidden">
+          <select
+            :value="style"
+            @change="onStyleSelect"
+            class="w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-semibold"
+          >
+            <option v-for="opt in styleOptions" :key="opt.key" :value="opt.key">
+              {{ opt.title }}
+            </option>
+          </select>
+        </div>
+
+        <div class="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             v-for="opt in styleOptions"

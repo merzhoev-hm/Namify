@@ -38,12 +38,14 @@ onMounted(() => {
   <header
     class="w-full border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm"
   >
-    <div class="container mx-auto max-w-4xl flex items-center justify-between px-6 py-4">
+    <div
+      class="container mx-auto max-w-4xl flex flex-col items-center gap-3 px-6 py-4 sm:flex-row sm:justify-between"
+    >
       <!-- Лого / название -->
       <h1 class="text-xl font-bold text-gray-900 dark:text-white">Namify</h1>
 
       <!-- Справа: Войти (слева) + тема (справа) -->
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
         <button
           v-if="!auth.user"
           type="button"
