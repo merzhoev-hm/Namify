@@ -27,7 +27,6 @@ type GoogleAccounts = {
           width: number
         },
       ) => void
-      initialize: (options: { client_id: string; callback: (resp: GoogleCredentialResponse) => void }) => void
       initialize: (options: {
         client_id: string
         callback: (resp: GoogleCredentialResponse) => void
