@@ -36,6 +36,7 @@ function onStyleSelect(event: Event) {
   const value = (target?.value ?? props.style) as NameStyle
   emit('setStyle', value)
 }
+
 </script>
 
 <template>
@@ -82,6 +83,7 @@ function onStyleSelect(event: Event) {
         </div>
 
         <div class="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             v-for="opt in styleOptions"
             :key="opt.key"
