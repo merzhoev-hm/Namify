@@ -27,7 +27,7 @@ function statusClass(status: string, checking: boolean) {
   <div
     class="rounded-2xl p-6 border shadow-lg bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-700"
   >
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex gap-3 flex-row items-center justify-between">
       <div>
         <div class="text-lg font-semibold dark:text-white">{{ suggestion.label }}</div>
       </div>
