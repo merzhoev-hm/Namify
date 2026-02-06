@@ -5,17 +5,14 @@ import { useSuggestionsStore } from '@/stores/suggestions'
 import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 import SuggestionCard from '@/components/SuggestionCard.vue'
-
 import IdeaForm from '@/components/IdeaForm.vue'
 import FavoritesPanel from '@/components/FavoritesPanel.vue'
 
-// Сторы
 const tlds = useTldsStore()
 const suggestionsStore = useSuggestionsStore()
 const auth = useAuthStore()
 const fav = useFavoritesStore()
 
-// Локальный стейт
 const idea = ref('')
 const MAX_IDEA_LEN = 100
 const warning = ref('')
@@ -39,7 +36,6 @@ function setStyle(s: NameStyle) {
   localStorage.setItem(STYLE_KEY, s)
 }
 
-// Счётчик символов
 const ideaCount = computed(() => idea.value.length)
 const ideaCounterClass = computed(() =>
   ideaCount.value >= MAX_IDEA_LEN
@@ -56,7 +52,6 @@ function onGenerate() {
   suggestionsStore.generate(idea.value, [...tlds.selected], style.value)
 }
 
-// Следим за лимитом символов
 function onInput() {
   warning.value = idea.value.length >= MAX_IDEA_LEN ? 'Достигнут лимит' : ''
 }
@@ -74,7 +69,6 @@ watch(
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-zinc-950 text-black dark:text-white">
     <div class="max-w-3xl mx-auto p-6 md:p-10">
-      <!-- Заголовок -->
       <h1 class="text-2xl font-bold md:text-3xl text-center">
         AI поможет выбрать имя, которое запомнят
       </h1>
@@ -82,7 +76,6 @@ watch(
         Онлайн генератор уникальных названий для проектов и бизнеса
       </p>
 
-      <!-- Ввод идеи -->
       <IdeaForm
         v-model:idea="idea"
         :warning="warning"
@@ -109,7 +102,6 @@ watch(
         @remove="fav.removeFavorite"
       />
 
-      <!-- Карточки -->
       <div class="mt-8 grid gap-4">
         <div
           v-for="(card, idx) in suggestionsStore.suggestions"

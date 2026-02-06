@@ -25,9 +25,7 @@ const emit = defineEmits<{
       <div>
         <div class="text-sm font-semibold">Избранное</div>
         <div class="text-xs text-gray-500 dark:text-gray-400">
-          {{
-            loading ? 'Загрузка…' : `Имена: ${names.length}, домены: ${domains.length}`
-          }}
+          {{ loading ? 'Загрузка…' : `Имена: ${names.length}, домены: ${domains.length}` }}
         </div>
       </div>
 

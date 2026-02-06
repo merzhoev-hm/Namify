@@ -4,16 +4,13 @@ import { useAuthStore } from '@/stores/auth'
 import AuthModal from '@/components/AuthModal.vue'
 import GoogleLoginButton from '@/components/GoogleLoginButton.vue'
 
-// AUTH
 const auth = useAuthStore()
 const authOpen = ref(false)
 
-// если вошли — закрываем модалку
 watchEffect(() => {
   if (auth.user) authOpen.value = false
 })
 
-// THEME
 const isDark = ref(false)
 
 function applyTheme() {
@@ -41,10 +38,8 @@ onMounted(() => {
     <div
       class="container mx-auto max-w-4xl flex flex-col items-center gap-3 px-6 py-4 sm:flex-row sm:justify-between"
     >
-      <!-- Лого / название -->
       <h1 class="text-xl font-bold text-gray-900 dark:text-white">Namify</h1>
 
-      <!-- Справа: Войти (слева) + тема (справа) -->
       <div class="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
         <button
           v-if="!auth.user"
@@ -71,7 +66,6 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Кнопка переключения темы -->
         <button
           type="button"
           @click="toggleTheme"
@@ -85,9 +79,7 @@ onMounted(() => {
     </div>
   </header>
 
-  <!-- Модалка входа -->
   <AuthModal :open="authOpen" @close="authOpen = false">
-    <!-- пока только один способ -->
     <GoogleLoginButton />
   </AuthModal>
 </template>

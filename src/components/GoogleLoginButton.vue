@@ -53,29 +53,22 @@ function loadScript(src: string) {
 
 function renderGoogleButton() {
   if (!mountEl.value) return
-
-  // Контейнер обязан быть видимым, иначе ширина будет 0
   const width = mountEl.value.clientWidth || 320
   if (width === lastWidth) return
   lastWidth = width
-
-  // Перерисовываем кнопку (иначе будет “сужаться/прыгать”)
   mountEl.value.innerHTML = ''
-
   google.accounts.id.renderButton(mountEl.value, {
     theme: 'outline',
     size: 'large',
     shape: 'pill',
     text: 'signin_with',
-    width, // 👈 фиксируем ширину под контейнер
+    width,
   })
-
   ready.value = true
 }
 
 onMounted(async () => {
   try {
-    // получаем Client ID с сервера
     const cfg = await fetch('/api/config', { credentials: 'include' }).then((r) => r.json())
     const clientId: string | null = cfg.googleClientId ?? null
     if (!clientId) {
@@ -83,7 +76,6 @@ onMounted(async () => {
       return
     }
 
-    // грузим GIS
     await loadScript('https://accounts.google.com/gsi/client')
 
     google.accounts.id.initialize({
@@ -97,13 +89,9 @@ onMounted(async () => {
       },
     })
 
-    // Рендерим после 1 кадра, чтобы контейнер точно имел ширину
     if (mountEl.value) {
       requestAnimationFrame(() => renderGoogleButton())
-
-      // Следим за изменением ширины (мобилка/ресайз) и перерисовываем
       ro = new ResizeObserver(() => {
-        // если кнопка уже отрисована — перерисуем под новую ширину
         if (mountEl.value) {
           cancelAnimationFrame(rerenderFrame)
           rerenderFrame = requestAnimationFrame(() => renderGoogleButton())
@@ -128,13 +116,11 @@ onBeforeUnmount(() => {
       Войдите, чтобы сохранять историю и настройки.
     </p>
 
-    <!-- Плейсхолдер, пока грузится/рендерится кнопка -->
     <div
       v-if="!ready"
       class="w-full h-12 rounded-full border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/40 animate-pulse"
     ></div>
 
-    <!-- Контейнер под google кнопку -->
     <div ref="mountEl" class="w-full" :class="{ 'mt-2': !ready }"></div>
 
     <p v-if="error" class="mt-3 text-xs text-rose-500">{{ error }}</p>

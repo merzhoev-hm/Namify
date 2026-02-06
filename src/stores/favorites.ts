@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 export type FavoriteRow = {
   id: number
   kind: 'name' | 'domain'
-  value: string // хранится в базе lower-case
+  value: string
   description?: string | null
   createdAt: string
 }
@@ -72,8 +72,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
       items.value = Array.isArray(data.items) ? data.items : []
       loaded.value = true
     } catch (e: unknown) {
-      // если не авторизован — просто считаем что избранного “нет”
-      if (e && typeof e === 'object' && 'error' in e && (e as { error?: unknown }).error === 'Unauthorized') {
+      if (
+        e &&
+        typeof e === 'object' &&
+        'error' in e &&
+        (e as { error?: unknown }).error === 'Unauthorized'
+      ) {
         items.value = []
         loaded.value = false
         return
@@ -87,8 +91,6 @@ export const useFavoritesStore = defineStore('favorites', () => {
   async function toggleName(label: string, description?: string) {
     error.value = ''
     const value = label.toLowerCase()
-
-    // optimistic UI
     const had = isFavName(label)
 
     try {
@@ -99,9 +101,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
       })
       await load()
     } catch (e: unknown) {
-      // лимит
       error.value = resolveErrorMessage(e, 'Не удалось сохранить')
-      // откат не нужен — мы после load синхронизируемся
       if (had) await load()
     }
   }
