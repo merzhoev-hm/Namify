@@ -105,13 +105,13 @@ function statusClass(status: string, checking: boolean) {
                 :href="item.registerUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-xs font-semibold px-3 py-1 rounded-full border border-black dark:border-white hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
+                class="text-xs order-2 sm:order-1 font-semibold px-3 py-1 rounded-full border border-black dark:border-white hover:bg-gray-100/90 dark:hover:bg-zinc-800/80"
               >
                 Зарегистрировать домен
               </a>
               <span
                 :class="[
-                  'text-xs font-semibold px-2 py-1 rounded-full',
+                  'text-xs order-1 sm:order-2 font-semibold px-2 py-1 rounded-full',
                   statusClass(item.status, item.checking),
                 ]"
               >
